@@ -798,7 +798,7 @@
                     <h3 style="margin-bottom: 10px; color: var(--text-primary);">파일을 드래그하거나 클릭하여 선택</h3>
                     <p style="color: var(--text-secondary);">엑셀 파일의 모든 시트가 자동으로 분석됩니다</p>
                     <p style="color: var(--ajd-blue); margin-top: 10px; font-weight: 600;">
-                        🎯 한국어 스마트 파싱: 각 시트별 구조 자동 인식
+                        🎯 개선된 파싱: 각 시트 구조 정확히 인식
                     </p>
                 </div>
                 
@@ -815,11 +815,7 @@
                         <div class="file-item">✅ 넥스</div>
                         <div class="file-item">✅ 렌탈페이</div>
                         <div class="file-item">✅ 이니렌탈</div>
-                        <div class="file-item">✅ 코오롱렌탈</div>
-                        <div class="file-item">✅ 경동나비엔</div>
-                        <div class="file-item">✅ LG헬로비전</div>
-                        <div class="file-item">✅ SK매직</div>
-                        <div class="file-item">✅ 웅진코웨이</div>
+                        <div class="file-item">✅ 기타 렌탈사</div>
                     </div>
                 </div>
             </div>
@@ -909,6 +905,14 @@
                             <li><strong>설정 변경:</strong> 관리 탭에서 계산 값 수정 가능</li>
                         </ol>
                     </div>
+                    
+                    <div style="padding: 20px; background: rgba(25, 118, 210, 0.1); border-radius: 10px; border: 1px solid var(--ajd-blue);">
+                        <h3 style="color: var(--ajd-blue); margin-bottom: 15px;">📊 파일 처리 상태</h3>
+                        <p style="color: var(--text-secondary); line-height: 1.8;">
+                            업로드 시 콘솔(F12)에서 상세 로그를 확인할 수 있습니다.<br>
+                            문제 발생 시 로그를 확인하여 데이터 구조를 파악하세요.
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -926,6 +930,26 @@
         // 수수료 계산 설정 (로컬 스토리지에서 불러오기)
         let commissionSettings = {
             normalDivisor: 1.1
+        };
+
+        // 시트별 구조 정의 (명확하게)
+        const SHEET_STRUCTURES = {
+            'KT렌탈': {
+                headerRow: 5,  // 6번째 줄 (0부터 시작)
+                dataStart: 7,  // 8번째 줄부터 데이터
+                columns: {
+                    product: 1,    // B열: 상품명
+                    model: 3,      // D열: 모델코드
+                    rental36: 5,   // F열: 36개월 렌탈료
+                    rental48: 6,   // G열: 48개월 렌탈료
+                    rental60: 7,   // H열: 60개월 렌탈료  
+                    commission36: 11,  // L열: 36개월 수수료
+                    commission48: 12,  // M열: 48개월 수수료
+                    commission60: 13   // N열: 60개월 수수료
+                },
+                type: 'multi_month',
+                vatIncluded: true
+            }
         };
 
         // 초기화
@@ -1120,7 +1144,7 @@
             processFiles(files);
         }
 
-        // 파일 처리
+        // 파일 처리 (테스트 및 진단 포함)
         async function processFiles(files) {
             if (!supabaseClient) {
                 showStatus('uploadStatus', 'Supabase 연결을 확인해주세요.', 'error');
@@ -1156,8 +1180,8 @@
                     
                     updateProgress(0, 100, `${file.name} 분석 중...`);
                     
-                    // 엑셀 파일 파싱
-                    const sheetDataArray = await parseExcelFile(file);
+                    // 엑셀 파일 파싱 (테스트 모드 포함)
+                    const sheetDataArray = await parseExcelFileWithTest(file);
                     totalSheets += sheetDataArray.length;
                     
                     let fileProductCount = 0;
@@ -1257,52 +1281,48 @@
             }
         }
 
-        // 엑셀 파일 파싱 (한국어 최적화)
-        function parseExcelFile(file) {
+        // 엑셀 파일 파싱 (테스트 모드 포함)
+        function parseExcelFileWithTest(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 
                 reader.onload = function(e) {
                     try {
                         const data = new Uint8Array(e.target.result);
-                        // 한국어 인코딩 처리 옵션 추가
-                        const workbook = XLSX.read(data, {
-                            type: 'array',
-                            cellText: false,
-                            cellDates: true,
-                            codepage: 949  // 한국어 코드페이지
-                        });
                         
-                        console.log(`\n========================================`);
-                        console.log(`📁 파일명: ${file.name}`);
-                        console.log(`📊 총 시트 수: ${workbook.SheetNames.length}`);
-                        console.log(`시트 목록: ${workbook.SheetNames.join(', ')}`);
-                        console.log(`========================================`);
+                        // XLSX 읽기 - 가장 기본 옵션
+                        const workbook = XLSX.read(data, {type: 'array'});
+                        
+                        console.log('\n📊 워크북 정보:');
+                        console.log('  - 시트 개수:', workbook.SheetNames.length);
+                        console.log('  - 시트 이름들:', workbook.SheetNames);
                         
                         const allSheetProducts = [];
                         
-                        // 모든 시트 처리
-                        for (let sheetIndex = 0; sheetIndex < workbook.SheetNames.length; sheetIndex++) {
-                            const sheetName = workbook.SheetNames[sheetIndex];
-                            console.log(`\n▶ [${sheetIndex + 1}/${workbook.SheetNames.length}] 시트: "${sheetName}" 처리 시작`);
+                        // 각 시트 처리
+                        workbook.SheetNames.forEach((sheetName, index) => {
+                            console.log(`\n🔍 시트 ${index + 1}: "${sheetName}"`);
                             
                             const sheet = workbook.Sheets[sheetName];
+                            
+                            // 시트를 JSON으로 변환
                             const jsonData = XLSX.utils.sheet_to_json(sheet, {
                                 header: 1,
-                                defval: null,
-                                raw: false,
-                                dateNF: 'yyyy-mm-dd'
+                                defval: '',
+                                raw: false
                             });
                             
-                            console.log(`  - 전체 행 수: ${jsonData.length}`);
+                            console.log('  - 총 행 수:', jsonData.length);
                             
-                            if (jsonData.length === 0) {
-                                console.log(`  ⚠️ 빈 시트입니다.`);
-                                continue;
+                            // 처음 10행 출력
+                            console.log('  - 처음 10행 데이터:');
+                            for (let i = 0; i < Math.min(10, jsonData.length); i++) {
+                                const row = jsonData[i];
+                                console.log(`    행 ${i}:`, row ? row.slice(0, 8) : 'null');
                             }
                             
-                            // 스마트 한국어 파싱
-                            const products = smartParseKoreanSheet(jsonData, sheetName, file.name);
+                            // 시트별 파싱
+                            const products = parseSheetByStructure(jsonData, sheetName, file.name);
                             
                             if (products.length > 0) {
                                 console.log(`  ✅ ${products.length}개 상품 추출 완료`);
@@ -1313,13 +1333,14 @@
                             } else {
                                 console.log(`  ⚠️ 유효한 상품을 찾을 수 없음`);
                             }
-                        }
+                        });
                         
                         console.log(`\n📊 최종 결과: ${allSheetProducts.length}개 시트에서 데이터 추출`);
                         resolve(allSheetProducts);
                         
                     } catch (error) {
-                        console.error('❌ 파일 파싱 오류:', error);
+                        console.error('❌ 파일 읽기 오류:', error);
+                        console.error('오류 상세:', error.stack);
                         reject(error);
                     }
                 };
@@ -1328,395 +1349,318 @@
             });
         }
 
-        // 스마트 한국어 시트 파싱
-        function smartParseKoreanSheet(data, sheetName, fileName) {
-            console.log(`  🤖 스마트 한국어 파싱 시작: ${sheetName}`);
+        // 시트 구조에 따른 파싱
+        function parseSheetByStructure(data, sheetName, fileName) {
+            console.log(`\n📋 시트 파싱: ${sheetName}`);
+            console.log(`  총 행 수: ${data.length}`);
             
-            // 특수 시트 우선 처리
+            // KT렌탈 또는 특정 구조가 정의된 시트
             if (sheetName === 'KT렌탈' || sheetName.includes('KT')) {
-                return parseKTRentalSheet(data, sheetName, fileName);
+                return parseKTRentalSimple(data, sheetName, fileName);
             }
             
-            // 자동 구조 분석
-            const structure = analyzeSheetStructure(data, sheetName);
+            // 시트 구조 가져오기
+            const structure = SHEET_STRUCTURES[sheetName];
             
-            // 구조에 따라 파싱
-            if (structure.type === 'multiple_months') {
-                return parseMultipleMonthsSheet(data, structure, sheetName, fileName);
+            if (structure) {
+                // 정의된 구조로 파싱
+                console.log(`  ✅ 정의된 구조 사용`);
+                return parseWithDefinedStructure(data, structure, sheetName, fileName);
             } else {
-                return parseSingleMonthSheet(data, structure, sheetName, fileName);
+                // 자동 파싱 시도
+                console.log(`  🔍 자동 구조 감지 시도`);
+                return autoParseSheet(data, sheetName, fileName);
             }
         }
 
-        // 시트 구조 분석
-        function analyzeSheetStructure(data, sheetName) {
-            const structure = {
-                type: 'single_month',  // 'single_month' or 'multiple_months'
-                headerRow: -1,
-                dataStartRow: -1,
-                columns: {},
-                hasCommission: false,
-                vatIncluded: false
-            };
-            
-            // 헤더 찾기 (한국어 키워드)
-            const headerKeywords = [
-                '모델', '상품', '제품', '품명', '품목',
-                '렌탈', '월', '요금', '금액',
-                '수수료', '커미션', '지원금'
-            ];
-            
-            let bestHeaderScore = 0;
-            let bestHeaderRow = -1;
-            
-            for (let i = 0; i < Math.min(30, data.length); i++) {
-                const row = data[i];
-                if (!row || row.length < 3) continue;
-                
-                const rowText = row.map(cell => String(cell || '')).join(' ');
-                let score = 0;
-                
-                for (const keyword of headerKeywords) {
-                    if (rowText.includes(keyword)) {
-                        score++;
-                    }
-                }
-                
-                if (score > bestHeaderScore) {
-                    bestHeaderScore = score;
-                    bestHeaderRow = i;
-                }
-            }
-            
-            structure.headerRow = bestHeaderRow;
-            structure.dataStartRow = bestHeaderRow + 1;
-            
-            // 개월 구조 확인
-            if (bestHeaderRow >= 0) {
-                const headerRow = data[bestHeaderRow];
-                const headerText = headerRow.map(cell => String(cell || '')).join(' ');
-                
-                // 36, 48, 60 등의 숫자가 여러 개 있으면 multiple_months
-                const monthNumbers = ['36', '48', '60'];
-                let foundMonths = 0;
-                for (const month of monthNumbers) {
-                    if (headerText.includes(month)) {
-                        foundMonths++;
-                    }
-                }
-                
-                if (foundMonths >= 2) {
-                    structure.type = 'multiple_months';
-                }
-                
-                // VAT 포함 여부
-                if (headerText.includes('vat포') || headerText.includes('VAT포') || 
-                    headerText.includes('부가세포함') || headerText.includes('부가세 포함')) {
-                    structure.vatIncluded = true;
-                }
-                
-                // 수수료 있는지 확인
-                if (headerText.includes('수수료') || headerText.includes('커미션')) {
-                    structure.hasCommission = true;
-                }
-                
-                // 컬럼 인덱스 찾기
-                structure.columns = findKoreanColumnIndexes(headerRow);
-            }
-            
-            console.log(`  - 구조 분석: ${structure.type}, 헤더: ${structure.headerRow}행, VAT포함: ${structure.vatIncluded}`);
-            
-            return structure;
-        }
-
-        // 한국어 컬럼 인덱스 찾기
-        function findKoreanColumnIndexes(headers) {
-            const indexes = {
-                model: -1,
-                product: -1,
-                rental: -1,
-                commission: -1,
-                months: -1,
-                as: -1
-            };
-            
-            for (let i = 0; i < headers.length; i++) {
-                const header = String(headers[i] || '').toLowerCase();
-                
-                // 모델
-                if (indexes.model === -1 && 
-                    (header.includes('모델') || header.includes('품번') || header.includes('코드'))) {
-                    indexes.model = i;
-                }
-                
-                // 상품명
-                if (indexes.product === -1 && 
-                    (header.includes('상품') || header.includes('품명') || header.includes('제품'))) {
-                    indexes.product = i;
-                }
-                
-                // 렌탈료
-                if (indexes.rental === -1 && 
-                    (header.includes('렌탈') || header.includes('월') || header.includes('요금'))) {
-                    indexes.rental = i;
-                }
-                
-                // 수수료
-                if (indexes.commission === -1 && 
-                    (header.includes('수수료') || header.includes('커미션') || header.includes('지원'))) {
-                    indexes.commission = i;
-                }
-                
-                // 개월
-                if (indexes.months === -1 && 
-                    (header.includes('개월') || header.includes('기간') || header.includes('약정'))) {
-                    indexes.months = i;
-                }
-                
-                // A/S
-                if (indexes.as === -1 && 
-                    (header.includes('a/s') || header.includes('as') || header.includes('서비스'))) {
-                    indexes.as = i;
-                }
-            }
-            
-            return indexes;
-        }
-
-        // KT렌탈 시트 전용 파싱 (수정)
-        function parseKTRentalSheet(data, sheetName, fileName) {
+        // KT렌탈 전용 심플 파싱
+        function parseKTRentalSimple(data, sheetName, fileName) {
             const products = [];
-            const companyName = 'KT렌탈';
             
-            console.log(`  - KT렌탈 시트 특수 처리 시작`);
+            console.log('KT렌탈 심플 파싱 시작');
+            console.log('데이터 행 수:', data.length);
             
-            let validRowCount = 0;
+            // KT렌탈 시트 상세 분석
+            console.log('\n  🎯 KT렌탈 시트 상세 분석:');
             
-            // 데이터는 행 8부터 시작 (인덱스 7)
+            // 5행 (헤더1)
+            if (data[4]) {
+                console.log('    행 5 (헤더1):', data[4].slice(0, 15));
+            }
+            
+            // 6행 (헤더2)
+            if (data[5]) {
+                console.log('    행 6 (헤더2):', data[5].slice(0, 15));
+            }
+            
+            // 8행 (첫 데이터)
+            if (data[7]) {
+                console.log('    행 8 (첫 데이터):', data[7].slice(0, 15));
+            }
+            
+            // 7번 행부터 시작 (0부터 시작하므로 인덱스 7)
             for (let i = 7; i < data.length; i++) {
                 const row = data[i];
-                if (!row || !row[1] || !row[3]) continue;
                 
-                const productName = String(row[1] || '').trim();
-                const modelCode = String(row[3] || '').trim();
-                
-                // 빈 행 체크
-                if (!productName && !modelCode) continue;
-                
-                // 각 개월별로 별도 상품 생성 (수수료 컬럼 추가)
-                const monthColumns = [
-                    { months: 36, rentalIndex: 5, commissionIndex: 11 },
-                    { months: 48, rentalIndex: 6, commissionIndex: 12 },
-                    { months: 60, rentalIndex: 7, commissionIndex: 13 }
-                ];
-                
-                for (const { months, rentalIndex, commissionIndex } of monthColumns) {
-                    const rentalFee = parseNumber(row[rentalIndex]);
-                    const originalCommission = parseNumber(row[commissionIndex]);
-                    
-                    if (rentalFee > 0 && rentalFee < 1000000) {
-                        // VAT 포함이므로 1.1로 나누기
-                        const calculatedCommission = originalCommission > 0 ? 
-                            originalCommission / commissionSettings.normalDivisor : 0;
-                        
-                        products.push({
-                            company: companyName,
-                            model: modelCode,
-                            product: productName,
-                            as_info: '',
-                            rental_fee: rentalFee,
-                            months: months,
-                            original_commission: originalCommission,
-                            calculated_commission: calculatedCommission,
-                            sheet_name: sheetName,
-                            file_name: fileName
-                        });
-                        
-                        validRowCount++;
-                        
-                        if (validRowCount <= 3) {
-                            console.log(`    샘플 ${validRowCount}: ${modelCode} | ${months}개월 | 렌탈료: ${rentalFee}원 | 수수료: ${Math.round(calculatedCommission)}원`);
-                        }
-                    }
+                // row가 배열인지 확인
+                if (!Array.isArray(row)) {
+                    console.log(`행 ${i}: 배열이 아님`);
+                    continue;
                 }
-            }
-            
-            console.log(`  - KT렌탈 처리 완료: ${validRowCount}개 상품`);
-            return products;
-        }
-
-        // 다중 개월 시트 파싱
-        function parseMultipleMonthsSheet(data, structure, sheetName, fileName) {
-            const products = [];
-            const companyName = sheetName;
-            
-            console.log(`  - 다중 개월 구조 처리`);
-            
-            // 개월별 컬럼 찾기
-            const monthColumns = findMonthColumns(data[structure.headerRow]);
-            
-            for (let i = structure.dataStartRow; i < data.length; i++) {
-                const row = data[i];
-                if (!row) continue;
                 
-                const baseInfo = {
-                    company: companyName,
-                    model: getValueFromRow(row, structure.columns.model),
-                    product: getValueFromRow(row, structure.columns.product),
-                    as_info: getValueFromRow(row, structure.columns.as),
-                    sheet_name: sheetName,
-                    file_name: fileName
-                };
+                // 필수 데이터 확인
+                const productName = row[1];  // B열
+                const modelCode = row[3];    // D열
                 
-                // 유효한 데이터인지 체크
-                if (!baseInfo.model && !baseInfo.product) continue;
-                
-                // 각 개월별로 상품 생성
-                for (const monthCol of monthColumns) {
-                    const rentalFee = parseNumber(row[monthCol.rentalIndex]);
-                    const commission = parseNumber(row[monthCol.commissionIndex] || 0);
-                    
-                    if (rentalFee > 0 && rentalFee < 1000000) {
-                        const calculatedCommission = structure.vatIncluded ? 
-                            commission / commissionSettings.normalDivisor : commission;
-                        
-                        products.push({
-                            ...baseInfo,
-                            rental_fee: rentalFee,
-                            months: monthCol.months,
-                            original_commission: commission,
-                            calculated_commission: calculatedCommission
-                        });
-                    }
+                if (!productName || !modelCode) {
+                    continue;
                 }
-            }
-            
-            return products;
-        }
-
-        // 단일 개월 시트 파싱
-        function parseSingleMonthSheet(data, structure, sheetName, fileName) {
-            const products = [];
-            const companyName = sheetName;
-            
-            console.log(`  - 단일 개월 구조 처리`);
-            
-            for (let i = structure.dataStartRow; i < data.length; i++) {
-                const row = data[i];
-                if (!row) continue;
                 
-                const model = getValueFromRow(row, structure.columns.model);
-                const product = getValueFromRow(row, structure.columns.product);
+                // 36개월
+                const rental36 = parseFloat(String(row[5] || '0').replace(/[^0-9.-]/g, ''));
+                const commission36 = parseFloat(String(row[11] || '0').replace(/[^0-9.-]/g, ''));
                 
-                // 유효한 데이터인지 체크
-                if (!model && !product) continue;
-                
-                const rental_fee = parseNumber(getValueFromRow(row, structure.columns.rental));
-                const original_commission = parseNumber(getValueFromRow(row, structure.columns.commission));
-                const months = parseNumber(getValueFromRow(row, structure.columns.months)) || 36;
-                
-                if (rental_fee > 0 && rental_fee < 1000000) {
-                    const calculated_commission = structure.vatIncluded ? 
-                        original_commission / commissionSettings.normalDivisor : original_commission;
-                    
+                if (rental36 > 0) {
                     products.push({
-                        company: companyName,
-                        model: model || product,
-                        product: product || model,
-                        as_info: getValueFromRow(row, structure.columns.as),
-                        rental_fee: rental_fee,
-                        months: months,
-                        original_commission: original_commission,
-                        calculated_commission: calculated_commission,
+                        company: 'KT렌탈',
+                        model: String(modelCode),
+                        product: String(productName),
+                        as_info: '',
+                        rental_fee: rental36,
+                        months: 36,
+                        original_commission: commission36,
+                        calculated_commission: commission36 / 1.1,
+                        sheet_name: sheetName,
+                        file_name: fileName
+                    });
+                }
+                
+                // 48개월
+                const rental48 = parseFloat(String(row[6] || '0').replace(/[^0-9.-]/g, ''));
+                const commission48 = parseFloat(String(row[12] || '0').replace(/[^0-9.-]/g, ''));
+                
+                if (rental48 > 0) {
+                    products.push({
+                        company: 'KT렌탈',
+                        model: String(modelCode),
+                        product: String(productName),
+                        as_info: '',
+                        rental_fee: rental48,
+                        months: 48,
+                        original_commission: commission48,
+                        calculated_commission: commission48 / 1.1,
+                        sheet_name: sheetName,
+                        file_name: fileName
+                    });
+                }
+                
+                // 60개월
+                const rental60 = parseFloat(String(row[7] || '0').replace(/[^0-9.-]/g, ''));
+                const commission60 = parseFloat(String(row[13] || '0').replace(/[^0-9.-]/g, ''));
+                
+                if (rental60 > 0) {
+                    products.push({
+                        company: 'KT렌탈',
+                        model: String(modelCode),
+                        product: String(productName),
+                        as_info: '',
+                        rental_fee: rental60,
+                        months: 60,
+                        original_commission: commission60,
+                        calculated_commission: commission60 / 1.1,
                         sheet_name: sheetName,
                         file_name: fileName
                     });
                 }
             }
             
+            console.log(`KT렌탈 파싱 완료: ${products.length}개 상품`);
+            
+            // 샘플 출력
+            if (products.length > 0) {
+                console.log('샘플 상품:');
+                products.slice(0, 3).forEach((p, i) => {
+                    console.log(`  ${i+1}. ${p.product} / ${p.model} / ${p.months}개월 / 렌탈료: ${p.rental_fee}원 / 수수료: ${Math.round(p.calculated_commission)}원`);
+                });
+            }
+            
             return products;
         }
 
-        // 개월별 컬럼 찾기
-        function findMonthColumns(headerRow) {
-            const monthColumns = [];
+        // 정의된 구조로 파싱
+        function parseWithDefinedStructure(data, structure, sheetName, fileName) {
+            const products = [];
             
-            for (let i = 0; i < headerRow.length; i++) {
-                const header = String(headerRow[i] || '');
+            // 데이터 샘플 출력 (디버깅용)
+            console.log(`  📊 데이터 샘플 (행 ${structure.dataStart}):`);
+            if (data[structure.dataStart]) {
+                console.log(`    ${data[structure.dataStart].slice(0, 10).join(' | ')}`);
+            }
+            
+            if (structure.type === 'multi_month') {
+                // 다중 개월 처리 (KT렌탈 등)
+                for (let i = structure.dataStart; i < data.length; i++) {
+                    const row = data[i];
+                    if (!row) continue;
+                    
+                    const productName = row[structure.columns.product];
+                    const modelCode = row[structure.columns.model];
+                    
+                    // 빈 행 체크
+                    if (!productName && !modelCode) continue;
+                    
+                    // 36개월
+                    if (structure.columns.rental36 !== undefined) {
+                        const rental = parseNumber(row[structure.columns.rental36]);
+                        const commission = parseNumber(row[structure.columns.commission36]);
+                        
+                        if (rental > 0) {
+                            products.push({
+                                company: sheetName,
+                                model: modelCode || '',
+                                product: productName || '',
+                                as_info: '',
+                                rental_fee: rental,
+                                months: 36,
+                                original_commission: commission,
+                                calculated_commission: structure.vatIncluded ? commission / 1.1 : commission,
+                                sheet_name: sheetName,
+                                file_name: fileName
+                            });
+                        }
+                    }
+                    
+                    // 48개월
+                    if (structure.columns.rental48 !== undefined) {
+                        const rental = parseNumber(row[structure.columns.rental48]);
+                        const commission = parseNumber(row[structure.columns.commission48]);
+                        
+                        if (rental > 0) {
+                            products.push({
+                                company: sheetName,
+                                model: modelCode || '',
+                                product: productName || '',
+                                as_info: '',
+                                rental_fee: rental,
+                                months: 48,
+                                original_commission: commission,
+                                calculated_commission: structure.vatIncluded ? commission / 1.1 : commission,
+                                sheet_name: sheetName,
+                                file_name: fileName
+                            });
+                        }
+                    }
+                    
+                    // 60개월
+                    if (structure.columns.rental60 !== undefined) {
+                        const rental = parseNumber(row[structure.columns.rental60]);
+                        const commission = parseNumber(row[structure.columns.commission60]);
+                        
+                        if (rental > 0) {
+                            products.push({
+                                company: sheetName,
+                                model: modelCode || '',
+                                product: productName || '',
+                                as_info: '',
+                                rental_fee: rental,
+                                months: 60,
+                                original_commission: commission,
+                                calculated_commission: structure.vatIncluded ? commission / 1.1 : commission,
+                                sheet_name: sheetName,
+                                file_name: fileName
+                            });
+                        }
+                    }
+                }
+            }
+            
+            console.log(`  ✅ ${products.length}개 상품 추출`);
+            return products;
+        }
+
+        // 자동 파싱 (기본)
+        function autoParseSheet(data, sheetName, fileName) {
+            const products = [];
+            const companyName = sheetName;
+            
+            // 헤더 찾기
+            let headerRow = -1;
+            let headers = [];
+            
+            for (let i = 0; i < Math.min(10, data.length); i++) {
+                const row = data[i];
+                if (!row || row.length < 3) continue;
                 
-                // 36개월
-                if (header.includes('36')) {
-                    monthColumns.push({
+                const rowText = row.map(cell => String(cell || '').toLowerCase()).join(' ');
+                
+                if (rowText.includes('모델') || rowText.includes('상품') || rowText.includes('렌탈')) {
+                    headerRow = i;
+                    headers = row.map(h => String(h || '').toLowerCase());
+                    console.log(`  헤더 발견: 행 ${i}`);
+                    break;
+                }
+            }
+            
+            if (headerRow === -1) {
+                console.log(`  헤더를 찾을 수 없음`);
+                return products;
+            }
+            
+            // 컬럼 인덱스 찾기
+            const modelIndex = headers.findIndex(h => h.includes('모델') || h.includes('코드'));
+            const productIndex = headers.findIndex(h => h.includes('상품') || h.includes('품명'));
+            const rentalIndex = headers.findIndex(h => h.includes('렌탈') || h.includes('월'));
+            const commissionIndex = headers.findIndex(h => h.includes('수수료') || h.includes('커미션'));
+            
+            console.log(`  컬럼 매핑: 모델[${modelIndex}], 상품[${productIndex}], 렌탈[${rentalIndex}], 수수료[${commissionIndex}]`);
+            
+            // 데이터 추출
+            for (let i = headerRow + 1; i < data.length; i++) {
+                const row = data[i];
+                if (!row) continue;
+                
+                const model = row[modelIndex] || '';
+                const product = row[productIndex] || '';
+                const rental = parseNumber(row[rentalIndex]);
+                const commission = parseNumber(row[commissionIndex]);
+                
+                if ((model || product) && rental > 0) {
+                    products.push({
+                        company: companyName,
+                        model: String(model),
+                        product: String(product),
+                        as_info: '',
+                        rental_fee: rental,
                         months: 36,
-                        rentalIndex: i,
-                        commissionIndex: findNearbyCommissionColumn(headerRow, i)
-                    });
-                }
-                // 48개월
-                if (header.includes('48')) {
-                    monthColumns.push({
-                        months: 48,
-                        rentalIndex: i,
-                        commissionIndex: findNearbyCommissionColumn(headerRow, i)
-                    });
-                }
-                // 60개월
-                if (header.includes('60')) {
-                    monthColumns.push({
-                        months: 60,
-                        rentalIndex: i,
-                        commissionIndex: findNearbyCommissionColumn(headerRow, i)
+                        original_commission: commission,
+                        calculated_commission: commission / 1.1,
+                        sheet_name: sheetName,
+                        file_name: fileName
                     });
                 }
             }
             
-            return monthColumns;
+            console.log(`  자동 파싱 완료: ${products.length}개 상품`);
+            return products;
         }
 
-        // 근처 수수료 컬럼 찾기
-        function findNearbyCommissionColumn(headerRow, rentalIndex) {
-            // 보통 렌탈료 다음 5~10 컬럼 내에 수수료가 있음
-            for (let i = rentalIndex + 1; i < Math.min(rentalIndex + 10, headerRow.length); i++) {
-                const header = String(headerRow[i] || '').toLowerCase();
-                if (header.includes('수수료') || header.includes('커미션')) {
-                    return i;
-                }
-            }
-            return -1;
-        }
-
-        // 값 추출 헬퍼 함수
-        function getValueFromRow(row, index) {
-            if (!row || index === -1 || index >= row.length || index === undefined) return '';
-            const value = row[index];
-            if (value === null || value === undefined) return '';
-            return String(value).trim();
-        }
-
-        // 숫자 파싱 (개선된 버전)
+        // 숫자 파싱
         function parseNumber(value) {
             if (value === null || value === undefined || value === '') return 0;
             
-            // 이미 숫자인 경우
             if (typeof value === 'number') {
                 return isNaN(value) ? 0 : value;
             }
             
-            // 문자열 처리
             let str = String(value).trim();
-            
-            // 쉼표, 원 기호 등 제거
             str = str.replace(/[,원￦$]/g, '');
             
-            // 괄호 안의 음수 처리
             if (str.startsWith('(') && str.endsWith(')')) {
                 str = '-' + str.slice(1, -1);
             }
             
-            // 숫자와 소수점, 음수 기호만 남기기
             str = str.replace(/[^0-9.-]/g, '');
             
-            // 여러 개의 소수점이 있으면 첫 번째만 남기기
             const parts = str.split('.');
             if (parts.length > 2) {
                 str = parts[0] + '.' + parts.slice(1).join('');
@@ -1726,7 +1670,7 @@
             return isNaN(parsed) ? 0 : parsed;
         }
 
-        // Supabase에 저장 (파일 단위로 대체)
+        // Supabase에 저장
         async function saveToSupabase(products) {
             if (!supabaseClient || products.length === 0) return;
             
