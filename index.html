@@ -333,7 +333,7 @@
         /* 결과 카드 */
         .results-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
             gap: 20px;
             margin-top: 30px;
         }
@@ -785,6 +785,7 @@
                 <div class="quick-filters">
                     <button class="filter-btn" onclick="filterByCompany('')">전체</button>
                     <button class="filter-btn" onclick="filterByCompany('BS렌탈')">BS렌탈</button>
+                    <button class="filter-btn" onclick="filterByCompany('유버스생활가전')">유버스생활가전</button>
                     <button class="filter-btn" onclick="filterByCompany('스마트렌탈')">스마트렌탈</button>
                     <button class="filter-btn" onclick="filterByCompany('캐리어')">캐리어</button>
                     <button class="filter-btn" onclick="filterByCompany('세라젬')">세라젬</button>
@@ -991,6 +992,8 @@
         window.onload = async function() {
             loadCommissionSettings();
             await connectSupabase();
+            // 초기 검색 실행 (전체 상품 표시)
+            await searchProducts();
         };
 
         // 수수료 설정 불러오기
@@ -1313,15 +1316,40 @@
             
             // 렌탈사명 추출 (시트명 또는 파일명에서)
             let companyName = sheetName;
-            const companies = ['BS렌탈', '스마트렌탈', '캐리어', '세라젬', '넥스', '렌탈페이', '이니렌탈', 
-                              '코오롱렌탈', '경동나비엔', 'LG헬로비전', 'SK매직', '웅진코웨이'];
             
-            for (const company of companies) {
-                if (sheetName.includes(company) || fileName.includes(company)) {
-                    companyName = company;
+            // 시트명을 그대로 사용하되, 특정 패턴만 변환
+            const companyMappings = {
+                'BS렌탈': 'BS렌탈',
+                'BS': 'BS렌탈',
+                '스마트렌탈': '스마트렌탈',
+                '스마트': '스마트렌탈',
+                '캐리어': '캐리어',
+                '세라젬': '세라젬',
+                '넥스': '넥스',
+                '렌탈페이': '렌탈페이',
+                '이니렌탈': '이니렌탈',
+                '이니': '이니렌탈',
+                '유버스생활가전': '유버스생활가전',
+                '유버스': '유버스생활가전',
+                '코오롱렌탈': '코오롱렌탈',
+                '코오롱': '코오롱렌탈',
+                '경동나비엔': '경동나비엔',
+                '경동': '경동나비엔',
+                'LG헬로비전': 'LG헬로비전',
+                'SK매직': 'SK매직',
+                '웅진코웨이': '웅진코웨이',
+                '코웨이': '웅진코웨이'
+            };
+            
+            // 매핑 확인
+            for (const [key, value] of Object.entries(companyMappings)) {
+                if (sheetName.includes(key) || fileName.includes(key)) {
+                    companyName = value;
                     break;
                 }
             }
+            
+            console.log(`  렌탈사: ${companyName}`);
             
             // 헤더 찾기 - 더 유연한 방식
             let headerRow = -1;
@@ -1514,12 +1542,15 @@
             if (!supabaseClient || products.length === 0) return;
             
             try {
-                // 같은 sheet_name의 기존 데이터 삭제
+                // 같은 sheet_name과 file_name의 기존 데이터 삭제
                 const sheetName = products[0].sheet_name;
+                const fileName = products[0].file_name;
+                
                 await supabaseClient
                     .from('rental_others')
                     .delete()
-                    .eq('sheet_name', sheetName);
+                    .eq('sheet_name', sheetName)
+                    .eq('file_name', fileName);
                 
                 // 새 데이터 삽입 (배치로 나누어 처리)
                 const batchSize = 100;
@@ -1567,18 +1598,54 @@
                 }
                 
                 const { data, error } = await query
-                    .order('calculated_commission', { ascending: true })
-                    .limit(100);
+                    .order('model')
+                    .order('months')
+                    .order('calculated_commission', { ascending: true });
                 
                 if (error) throw error;
                 
-                showSearchResults(data || []);
-                document.getElementById('searchResultCount').textContent = data ? data.length : 0;
+                // 모델별로 그룹화
+                const groupedProducts = groupProductsByModel(data || []);
+                showSearchResults(groupedProducts);
+                
+                // 총 검색 결과 수 업데이트
+                const totalResults = Object.values(groupedProducts).reduce((sum, group) => sum + group.length, 0);
+                document.getElementById('searchResultCount').textContent = totalResults;
                 
             } catch (error) {
                 console.error('검색 실패:', error);
                 showStatus('searchResults', '검색 중 오류가 발생했습니다.', 'error');
             }
+        }
+        
+        // 모델별로 상품 그룹화
+        function groupProductsByModel(products) {
+            const grouped = {};
+            
+            products.forEach(product => {
+                // 모델명 또는 상품명을 키로 사용
+                const key = product.model || product.product || 'unknown';
+                
+                if (!grouped[key]) {
+                    grouped[key] = [];
+                }
+                grouped[key].push(product);
+            });
+            
+            // 각 그룹 내에서 회사별, 계약기간별로 정렬
+            Object.keys(grouped).forEach(key => {
+                grouped[key].sort((a, b) => {
+                    if (a.company !== b.company) {
+                        return a.company.localeCompare(b.company);
+                    }
+                    if (a.months !== b.months) {
+                        return a.months - b.months;
+                    }
+                    return a.calculated_commission - b.calculated_commission;
+                });
+            });
+            
+            return grouped;
         }
 
         // 회사별 필터
@@ -1598,10 +1665,12 @@
         }
 
         // 검색 결과 표시
-        function showSearchResults(products) {
+        function showSearchResults(groupedProducts) {
             const container = document.getElementById('searchResults');
             
-            if (products.length === 0) {
+            const productCount = Object.keys(groupedProducts).length;
+            
+            if (productCount === 0) {
                 container.innerHTML = `
                     <div style="grid-column: 1/-1; text-align: center; padding: 60px; color: var(--text-secondary);">
                         <div style="font-size: 4em; margin-bottom: 20px; opacity: 0.3;">🔍</div>
@@ -1612,34 +1681,87 @@
                 return;
             }
             
-            container.innerHTML = products.map(product => `
-                <div class="product-card">
-                    <span class="company-badge">${product.company}</span>
-                    <div class="product-title">${product.product || '상품명 없음'}</div>
-                    <div class="product-model">${product.model || '모델명 없음'}</div>
-                    
-                    <div class="product-details">
-                        <div class="detail-item">
-                            <span class="detail-label">월 렌탈료</span>
-                            <span class="detail-value">${product.rental_fee.toLocaleString()}원</span>
+            // 그룹별로 카드 생성
+            const cardsHtml = Object.entries(groupedProducts).map(([modelKey, products]) => {
+                // 첫 번째 상품을 기준으로 기본 정보 표시
+                const firstProduct = products[0];
+                
+                // 렌탈사별로 그룹화
+                const byCompany = {};
+                products.forEach(p => {
+                    if (!byCompany[p.company]) {
+                        byCompany[p.company] = [];
+                    }
+                    byCompany[p.company].push(p);
+                });
+                
+                // 최저가 찾기
+                const lowestPrice = Math.min(...products.map(p => p.calculated_commission));
+                const lowestProduct = products.find(p => p.calculated_commission === lowestPrice);
+                
+                return `
+                    <div class="product-card" style="position: relative;">
+                        ${lowestProduct && lowestProduct.company ? `
+                            <div style="position: absolute; top: 10px; right: 10px; background: #4CAF50; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75em;">
+                                최저가: ${lowestProduct.company}
+                            </div>
+                        ` : ''}
+                        
+                        <div class="product-title">${firstProduct.product || firstProduct.model || '상품명 없음'}</div>
+                        <div class="product-model" style="margin-bottom: 15px;">${firstProduct.model || '모델명 없음'}</div>
+                        
+                        <div style="border-top: 1px solid rgba(25, 118, 210, 0.1); padding-top: 15px; max-height: 400px; overflow-y: auto;">
+                            <div style="font-size: 0.9em; color: var(--text-secondary); margin-bottom: 10px;">
+                                <strong>🏢 렌탈사별 옵션</strong> (${Object.keys(byCompany).length}개 업체)
+                            </div>
+                            
+                            ${Object.entries(byCompany).map(([company, companyProducts]) => {
+                                const lowestInCompany = Math.min(...companyProducts.map(p => p.calculated_commission));
+                                const isLowestCompany = companyProducts.some(p => p.calculated_commission === lowestPrice);
+                                
+                                return `
+                                <div style="margin-bottom: 10px; padding: 10px; background: var(--dark-surface); border-radius: 8px; ${isLowestCompany ? 'border: 1px solid #4CAF50;' : ''}">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                                        <span class="company-badge" style="font-size: 0.8em; padding: 4px 10px;">${company}</span>
+                                        <span style="font-size: 0.85em; color: var(--text-dim);">
+                                            ${companyProducts.length}개 옵션
+                                        </span>
+                                    </div>
+                                    
+                                    ${companyProducts.map(p => {
+                                        const isLowest = p.calculated_commission === lowestPrice;
+                                        return `
+                                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 5px 0; font-size: 0.9em; ${isLowest ? 'background: rgba(76, 175, 80, 0.1); padding: 5px; border-radius: 4px;' : ''}">
+                                            <div style="display: flex; gap: 15px; align-items: center;">
+                                                <span style="color: var(--text-secondary);">
+                                                    ${p.months}개월
+                                                </span>
+                                                <span style="color: var(--text-primary);">
+                                                    월 ${p.rental_fee.toLocaleString()}원
+                                                </span>
+                                            </div>
+                                            <div style="text-align: right;">
+                                                <span style="color: ${isLowest ? '#4CAF50' : 'var(--ajd-blue-light)'}; font-weight: 600;">
+                                                    수수료 ${Math.round(p.calculated_commission).toLocaleString()}원
+                                                </span>
+                                                ${isLowest ? '<br><span style="font-size: 0.75em; color: #4CAF50;">최저가</span>' : ''}
+                                            </div>
+                                        </div>
+                                    `}).join('')}
+                                </div>
+                            `}).join('')}
                         </div>
-                        <div class="detail-item">
-                            <span class="detail-label">계약 기간</span>
-                            <span class="detail-value">${product.months}개월</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">A/S 정보</span>
-                            <span class="detail-value">${product.as_info || '-'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="detail-label">계산된 수수료</span>
-                            <span class="detail-value commission-value">
-                                ${Math.round(product.calculated_commission).toLocaleString()}원
-                            </span>
-                        </div>
+                        
+                        ${firstProduct.as_info ? `
+                            <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(25, 118, 210, 0.1); font-size: 0.85em; color: var(--text-dim);">
+                                A/S: ${firstProduct.as_info}
+                            </div>
+                        ` : ''}
                     </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
+            
+            container.innerHTML = cardsHtml;
         }
 
         // 통계 로드
