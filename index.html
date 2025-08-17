@@ -993,7 +993,7 @@
         const SUPABASE_URL = 'https://bhtqjipygkawoyieidgp.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJodHFqaXB5Z2thd295aWVpZGdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0ODg5NjgsImV4cCI6MjA3MDA2NDk2OH0.hu2EAj9RCq436QBtfbEVF4aGOau4WWomLMDKahN4iAA';
         
-        let supabase = null;
+        let supabaseClient = null;
         let currentTab = 'search';
         let currentFilter = '';
         
@@ -1049,7 +1049,7 @@
 
         // 전체 수수료 재계산
         async function recalculateAllCommissions() {
-            if (!supabase) {
+            if (!supabaseClient) {
                 showStatus('manageStatus', 'Supabase 연결을 확인해주세요.', 'error');
                 return;
             }
@@ -1060,8 +1060,8 @@
             
             try {
                 // 모든 데이터 가져오기
-                const { data, error } = await supabase
-                    .from('rental_products')
+                const { data, error } = await supabaseClient
+                    .from('rental_others')
                     .select('*');
                 
                 if (error) throw error;
@@ -1079,8 +1079,8 @@
                 // 배치 업데이트
                 for (let i = 0; i < updated.length; i += 100) {
                     const batch = updated.slice(i, i + 100);
-                    await supabase
-                        .from('rental_products')
+                    await supabaseClient
+                        .from('rental_others')
                         .upsert(batch);
                     
                     updateProgress(i, updated.length, `${i}/${updated.length} 처리 중...`);
@@ -1099,16 +1099,21 @@
         // Supabase 자동 연결
         async function connectSupabase() {
             try {
+                // 전역 supabase 객체에서 createClient 가져오기
+                if (typeof supabase === 'undefined') {
+                    throw new Error('Supabase 라이브러리가 로드되지 않았습니다.');
+                }
+                
                 const { createClient } = supabase;
-                supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+                supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
                 
                 // 연결 테스트
-                const { data, error } = await supabase
-                    .from('rental_products')
+                const { data, error } = await supabaseClient
+                    .from('rental_others')
                     .select('count', { count: 'exact', head: true });
                 
                 if (error && error.code === 'PGRST116') {
-                    // 테이블이 없는 경우 생성
+                    // 테이블이 없는 경우 생성 안내
                     await initDatabase();
                 }
                 
@@ -1138,29 +1143,8 @@
 
         // 데이터베이스 초기화
         async function initDatabase() {
-            console.log('테이블 생성 필요 - Supabase Dashboard에서 다음 SQL 실행:');
-            console.log(`
-CREATE TABLE IF NOT EXISTS rental_products (
-    id SERIAL PRIMARY KEY,
-    company VARCHAR(100),
-    model VARCHAR(200),
-    product VARCHAR(500),
-    as_info VARCHAR(200),
-    rental_fee DECIMAL(10, 2),
-    months INTEGER,
-    original_commission DECIMAL(10, 2),
-    calculated_commission DECIMAL(10, 2),
-    sheet_name VARCHAR(100),
-    file_name VARCHAR(200),
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS idx_model ON rental_products(model);
-CREATE INDEX IF NOT EXISTS idx_product ON rental_products(product);
-CREATE INDEX IF NOT EXISTS idx_company ON rental_products(company);
-CREATE INDEX IF NOT EXISTS idx_sheet ON rental_products(sheet_name);
-            `);
+            console.log('테이블이 이미 존재합니다: rental_others');
+            console.log('기존 테이블 구조를 사용합니다.');
         }
 
         // 탭 전환
@@ -1212,7 +1196,7 @@ CREATE INDEX IF NOT EXISTS idx_sheet ON rental_products(sheet_name);
 
         // 파일 처리
         async function processFiles(files) {
-            if (!supabase) {
+            if (!supabaseClient) {
                 showStatus('uploadStatus', 'Supabase 연결을 확인해주세요.', 'error');
                 return;
             }
@@ -1449,13 +1433,13 @@ CREATE INDEX IF NOT EXISTS idx_sheet ON rental_products(sheet_name);
 
         // Supabase에 저장
         async function saveToSupabase(products) {
-            if (!supabase || products.length === 0) return;
+            if (!supabaseClient || products.length === 0) return;
             
             try {
                 // 같은 sheet_name의 기존 데이터 삭제
                 const sheetName = products[0].sheet_name;
-                await supabase
-                    .from('rental_products')
+                await supabaseClient
+                    .from('rental_others')
                     .delete()
                     .eq('sheet_name', sheetName);
                 
@@ -1463,8 +1447,8 @@ CREATE INDEX IF NOT EXISTS idx_sheet ON rental_products(sheet_name);
                 const batchSize = 100;
                 for (let i = 0; i < products.length; i += batchSize) {
                     const batch = products.slice(i, i + batchSize);
-                    const { error } = await supabase
-                        .from('rental_products')
+                    const { error } = await supabaseClient
+                        .from('rental_others')
                         .insert(batch);
                     
                     if (error) throw error;
@@ -1486,7 +1470,7 @@ CREATE INDEX IF NOT EXISTS idx_sheet ON rental_products(sheet_name);
 
         // 상품 검색
         async function searchProducts() {
-            if (!supabase) {
+            if (!supabaseClient) {
                 showStatus('searchResults', 'Supabase 연결을 확인해주세요.', 'error');
                 return;
             }
@@ -1494,7 +1478,7 @@ CREATE INDEX IF NOT EXISTS idx_sheet ON rental_products(sheet_name);
             const searchTerm = document.getElementById('searchInput').value.trim();
             
             try {
-                let query = supabase.from('rental_products').select('*');
+                let query = supabaseClient.from('rental_others').select('*');
                 
                 if (searchTerm) {
                     query = query.or(`model.ilike.%${searchTerm}%,product.ilike.%${searchTerm}%,company.ilike.%${searchTerm}%`);
@@ -1582,25 +1566,25 @@ CREATE INDEX IF NOT EXISTS idx_sheet ON rental_products(sheet_name);
 
         // 통계 로드
         async function loadStats() {
-            if (!supabase) return;
+            if (!supabaseClient) return;
             
             try {
                 // 전체 상품 수
-                const { count: totalCount } = await supabase
-                    .from('rental_products')
+                const { count: totalCount } = await supabaseClient
+                    .from('rental_others')
                     .select('*', { count: 'exact', head: true });
                 
                 // 회사 수
-                const { data: companies } = await supabase
-                    .from('rental_products')
+                const { data: companies } = await supabaseClient
+                    .from('rental_others')
                     .select('company')
                     .limit(5000);
                 
                 const uniqueCompanies = new Set(companies?.map(c => c.company) || []);
                 
                 // 마지막 업데이트
-                const { data: lastUpdate } = await supabase
-                    .from('rental_products')
+                const { data: lastUpdate } = await supabaseClient
+                    .from('rental_others')
                     .select('created_at')
                     .order('created_at', { ascending: false })
                     .limit(1);
@@ -1623,7 +1607,7 @@ CREATE INDEX IF NOT EXISTS idx_sheet ON rental_products(sheet_name);
 
         // 데이터베이스 초기화
         async function clearDatabase() {
-            if (!supabase) {
+            if (!supabaseClient) {
                 showStatus('manageStatus', 'Supabase 연결을 확인해주세요.', 'error');
                 return;
             }
@@ -1633,8 +1617,8 @@ CREATE INDEX IF NOT EXISTS idx_sheet ON rental_products(sheet_name);
             showLoadingOverlay(true, '데이터 삭제 중...');
             
             try {
-                const { error } = await supabase
-                    .from('rental_products')
+                const { error } = await supabaseClient
+                    .from('rental_others')
                     .delete()
                     .neq('id', 0);
                 
@@ -1652,7 +1636,7 @@ CREATE INDEX IF NOT EXISTS idx_sheet ON rental_products(sheet_name);
 
         // 데이터 내보내기
         async function exportDatabase() {
-            if (!supabase) {
+            if (!supabaseClient) {
                 showStatus('manageStatus', 'Supabase 연결을 확인해주세요.', 'error');
                 return;
             }
@@ -1660,8 +1644,8 @@ CREATE INDEX IF NOT EXISTS idx_sheet ON rental_products(sheet_name);
             showLoadingOverlay(true, '데이터 내보내기 준비 중...');
             
             try {
-                const { data, error } = await supabase
-                    .from('rental_products')
+                const { data, error } = await supabaseClient
+                    .from('rental_others')
                     .select('*')
                     .order('company');
                 
