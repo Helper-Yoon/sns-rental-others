@@ -1080,9 +1080,9 @@
     </div>
 
     <script>
-        // Vercel 환경변수 또는 기본값 사용
+        // Supabase 기본 설정 (내장)
         const SUPABASE_URL = 'https://bhtqjipygkawoyieidgp.supabase.co';
-        const SUPABASE_KEY = 'YOUR_ANON_KEY_HERE'; // Public anon key만 사용
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJodHFqaXB5Z2thd295aWVpZGdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0ODg5NjgsImV4cCI6MjA3MDA2NDk2OH0.hu2EAj9RCq436QBtfbEVF4aGOau4WWomLMDKahN4iAA';
         
         let supabase = null;
         let currentTab = 'search';
@@ -1174,7 +1174,7 @@
             try {
                 // 모든 데이터 가져오기
                 const { data, error } = await supabase
-                    .from('rental_products')
+                    .from('rental_others')
                     .select('*');
                 
                 if (error) throw error;
@@ -1203,7 +1203,7 @@
                 for (let i = 0; i < updated.length; i += 100) {
                     const batch = updated.slice(i, i + 100);
                     await supabase
-                        .from('rental_products')
+                        .from('rental_others')
                         .upsert(batch);
                     
                     updateProgress(i, updated.length, `${i}/${updated.length} 처리 중...`);
@@ -1226,7 +1226,7 @@
                 
                 // 연결 테스트
                 const { data, error } = await supabase
-                    .from('rental_products')
+                    .from('rental_others')
                     .select('count', { count: 'exact', head: true });
                 
                 if (error && error.code === 'PGRST116') {
@@ -1262,7 +1262,7 @@
         async function initDatabase() {
             console.log('테이블 생성 필요 - Supabase Dashboard에서 다음 SQL 실행:');
             console.log(`
-CREATE TABLE IF NOT EXISTS rental_products (
+CREATE TABLE IF NOT EXISTS rental_others (
     id SERIAL PRIMARY KEY,
     company VARCHAR(100),
     model VARCHAR(200),
@@ -1278,10 +1278,10 @@ CREATE TABLE IF NOT EXISTS rental_products (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_model ON rental_products(model);
-CREATE INDEX IF NOT EXISTS idx_product ON rental_products(product);
-CREATE INDEX IF NOT EXISTS idx_company ON rental_products(company);
-CREATE INDEX IF NOT EXISTS idx_sheet ON rental_products(sheet_name);
+CREATE INDEX IF NOT EXISTS idx_model ON rental_others(model);
+CREATE INDEX IF NOT EXISTS idx_product ON rental_others(product);
+CREATE INDEX IF NOT EXISTS idx_company ON rental_others(company);
+CREATE INDEX IF NOT EXISTS idx_sheet ON rental_others(sheet_name);
             `);
         }
 
@@ -1916,7 +1916,7 @@ CREATE INDEX IF NOT EXISTS idx_sheet ON rental_products(sheet_name);
                 // 같은 sheet_name의 기존 데이터 삭제
                 const sheetName = products[0].sheet_name;
                 await supabase
-                    .from('rental_products')
+                    .from('rental_others')
                     .delete()
                     .eq('sheet_name', sheetName);
                 
@@ -1925,7 +1925,7 @@ CREATE INDEX IF NOT EXISTS idx_sheet ON rental_products(sheet_name);
                 for (let i = 0; i < products.length; i += batchSize) {
                     const batch = products.slice(i, i + batchSize);
                     const { error } = await supabase
-                        .from('rental_products')
+                        .from('rental_others')
                         .insert(batch);
                     
                     if (error) throw error;
@@ -1955,7 +1955,7 @@ CREATE INDEX IF NOT EXISTS idx_sheet ON rental_products(sheet_name);
             const searchTerm = document.getElementById('searchInput').value.trim();
             
             try {
-                let query = supabase.from('rental_products').select('*');
+                let query = supabase.from('rental_others').select('*');
                 
                 if (searchTerm) {
                     query = query.or(`model.ilike.%${searchTerm}%,product.ilike.%${searchTerm}%,company.ilike.%${searchTerm}%`);
@@ -2048,12 +2048,12 @@ CREATE INDEX IF NOT EXISTS idx_sheet ON rental_products(sheet_name);
             try {
                 // 전체 상품 수
                 const { count: totalCount } = await supabase
-                    .from('rental_products')
+                    .from('rental_others')
                     .select('*', { count: 'exact', head: true });
                 
                 // 회사 수
                 const { data: companies } = await supabase
-                    .from('rental_products')
+                    .from('rental_others')
                     .select('company')
                     .limit(5000);
                 
@@ -2061,7 +2061,7 @@ CREATE INDEX IF NOT EXISTS idx_sheet ON rental_products(sheet_name);
                 
                 // 마지막 업데이트
                 const { data: lastUpdate } = await supabase
-                    .from('rental_products')
+                    .from('rental_others')
                     .select('created_at')
                     .order('created_at', { ascending: false })
                     .limit(1);
@@ -2095,7 +2095,7 @@ CREATE INDEX IF NOT EXISTS idx_sheet ON rental_products(sheet_name);
             
             try {
                 const { error } = await supabase
-                    .from('rental_products')
+                    .from('rental_others')
                     .delete()
                     .neq('id', 0);
                 
@@ -2122,7 +2122,7 @@ CREATE INDEX IF NOT EXISTS idx_sheet ON rental_products(sheet_name);
             
             try {
                 const { data, error } = await supabase
-                    .from('rental_products')
+                    .from('rental_others')
                     .select('*')
                     .order('company');
                 
