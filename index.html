@@ -1187,7 +1187,7 @@
                 return;
             }
             
-            console.log('=== 파일 업로드 시작 ===');
+            console.log('\n🚀 ========== 파일 업로드 시작 ==========');
             showLoadingOverlay(true, '파일 분석 중...');
             
             let totalProducts = 0;
@@ -1198,16 +1198,34 @@
             
             for (const file of files) {
                 try {
-                    console.log(`\n파일 처리: ${file.name}`);
+                    console.log(`\n📁 파일 처리 시작: ${file.name}`);
+                    console.log(`  파일 크기: ${(file.size / 1024).toFixed(2)} KB`);
+                    
+                    // 동일 파일명의 기존 데이터 전체 삭제
+                    console.log(`  🗑️ 기존 데이터 삭제 중...`);
+                    const deleteResult = await supabaseClient
+                        .from('rental_others')
+                        .delete()
+                        .eq('file_name', file.name);
+                    
+                    if (deleteResult.error) {
+                        console.log(`  ⚠️ 기존 데이터 삭제 오류 (계속 진행):`, deleteResult.error.message);
+                    } else {
+                        console.log(`  ✅ 파일 "${file.name}"의 모든 기존 데이터 삭제 완료`);
+                    }
+                    
                     updateProgress(0, 100, `${file.name} 분석 중...`);
                     
-                    const products = await parseExcelFile(file);
-                    totalSheets += products.length;
+                    // 엑셀 파일 파싱
+                    const sheetDataArray = await parseExcelFile(file);
+                    totalSheets += sheetDataArray.length;
                     
                     let fileProductCount = 0;
-                    for (const sheetData of products) {
+                    let fileSheetCount = 0;
+                    
+                    // 각 시트별로 저장
+                    for (const sheetData of sheetDataArray) {
                         if (sheetData.products.length > 0) {
-                            // 렌탈사별 통계
                             const company = sheetData.products[0].company;
                             companyStats[company] = (companyStats[company] || 0) + sheetData.products.length;
                             
@@ -1215,22 +1233,28 @@
                                 `${sheetData.sheetName} 저장 중... (${sheetData.products.length}개 상품)`);
                             
                             await saveToSupabase(sheetData.products);
+                            
                             fileProductCount += sheetData.products.length;
                             totalProducts += sheetData.products.length;
                             processedSheets++;
+                            fileSheetCount++;
                         }
                     }
                     
+                    console.log(`📊 파일 처리 완료: ${fileSheetCount}개 시트, ${fileProductCount}개 상품\n`);
+                    
                     fileResults.push({
                         name: file.name,
+                        sheets: fileSheetCount,
                         products: fileProductCount,
                         status: fileProductCount > 0 ? 'success' : 'warning'
                     });
                     
                 } catch (error) {
-                    console.error(`파일 처리 실패 (${file.name}):`, error);
+                    console.error(`❌ 파일 처리 실패 (${file.name}):`, error);
                     fileResults.push({
                         name: file.name,
+                        sheets: 0,
                         products: 0,
                         status: 'error'
                     });
@@ -1239,8 +1263,11 @@
             
             showLoadingOverlay(false);
             
-            console.log('\n=== 업로드 완료 ===');
+            console.log('\n📊 ========== 최종 업로드 결과 ==========');
             console.log('렌탈사별 저장 통계:', companyStats);
+            console.log('총 시트 수:', processedSheets);
+            console.log('총 상품 수:', totalProducts);
+            console.log('=========================================\n');
             
             // 결과 상세 표시
             let resultMessage = '';
@@ -1250,24 +1277,35 @@
                 // 렌탈사별 통계 추가
                 if (Object.keys(companyStats).length > 0) {
                     resultMessage += `<div style="margin-bottom: 15px; padding: 10px; background: rgba(25, 118, 210, 0.1); border-radius: 8px;">`;
-                    resultMessage += `<strong style="color: var(--ajd-blue);">렌탈사별 저장 현황:</strong><br>`;
-                    Object.entries(companyStats).forEach(([company, count]) => {
-                        resultMessage += `<span style="color: var(--text-secondary);">• ${company}: ${count}개</span><br>`;
-                    });
+                    resultMessage += `<strong style="color: var(--ajd-blue);">📊 렌탈사별 저장 현황:</strong><br>`;
+                    Object.entries(companyStats)
+                        .sort((a, b) => b[1] - a[1])
+                        .forEach(([company, count]) => {
+                            resultMessage += `<span style="color: var(--text-secondary);">• ${company}: ${count.toLocaleString()}개</span><br>`;
+                        });
                     resultMessage += `</div>`;
                 }
+                
+                // 파일별 결과
+                resultMessage += `<div style="margin-bottom: 15px;">`;
+                resultMessage += `<strong style="color: var(--ajd-blue);">📁 파일별 처리 결과:</strong><br>`;
+                fileResults.forEach(result => {
+                    const icon = result.status === 'success' ? '✅' : result.status === 'warning' ? '⚠️' : '❌';
+                    resultMessage += `<div style="padding: 5px 0;">`;
+                    resultMessage += `${icon} <span style="color: var(--text-secondary);">${result.name}</span><br>`;
+                    resultMessage += `<span style="margin-left: 30px; font-size: 0.9em; color: var(--text-dim);">`;
+                    resultMessage += `→ ${result.sheets}개 시트, ${result.products.toLocaleString()}개 상품</span>`;
+                    resultMessage += `</div>`;
+                });
+                resultMessage += `</div>`;
             } else {
                 resultMessage = `<strong>⚠️ 데이터를 찾을 수 없습니다</strong><br>`;
                 resultMessage += `<small>브라우저 콘솔(F12)에서 상세 로그를 확인하세요</small><br><br>`;
             }
             
-            resultMessage += `<div style="font-size: 0.9em;">`;
-            fileResults.forEach(result => {
-                const icon = result.status === 'success' ? '✅' : result.status === 'warning' ? '⚠️' : '❌';
-                resultMessage += `${icon} ${result.name}: ${result.products}개 상품<br>`;
-            });
-            resultMessage += `</div><br>`;
-            resultMessage += `<strong>총 ${processedSheets}개 시트에서 ${totalProducts}개 상품 저장됨</strong>`;
+            resultMessage += `<div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(25, 118, 210, 0.2);">`;
+            resultMessage += `<strong>📊 총 ${processedSheets}개 시트에서 ${totalProducts.toLocaleString()}개 상품 저장됨</strong>`;
+            resultMessage += `</div>`;
             
             showStatus('uploadStatus', resultMessage, totalProducts > 0 ? 'success' : 'error');
             
@@ -1289,32 +1327,52 @@
                         const data = new Uint8Array(e.target.result);
                         const workbook = XLSX.read(data, {type: 'array'});
                         
-                        console.log(`파일 분석: ${file.name}`);
+                        console.log(`\n========================================`);
+                        console.log(`📁 파일명: ${file.name}`);
+                        console.log(`📊 총 시트 수: ${workbook.SheetNames.length}`);
                         console.log(`시트 목록: ${workbook.SheetNames.join(', ')}`);
+                        console.log(`========================================`);
                         
                         const allSheetProducts = [];
                         
                         // 모든 시트 처리
-                        for (const sheetName of workbook.SheetNames) {
-                            console.log(`\n시트 처리 중: ${sheetName}`);
-                            const sheet = workbook.Sheets[sheetName];
-                            const jsonData = XLSX.utils.sheet_to_json(sheet, {header: 1});
-                            console.log(`  데이터 행 수: ${jsonData.length}`);
+                        for (let sheetIndex = 0; sheetIndex < workbook.SheetNames.length; sheetIndex++) {
+                            const sheetName = workbook.SheetNames[sheetIndex];
+                            console.log(`\n▶ [${sheetIndex + 1}/${workbook.SheetNames.length}] 시트: "${sheetName}" 처리 시작`);
                             
-                            const products = parseSheetData(jsonData, sheetName, file.name);
-                            console.log(`  추출된 상품 수: ${products.length}`);
+                            const sheet = workbook.Sheets[sheetName];
+                            const jsonData = XLSX.utils.sheet_to_json(sheet, {
+                                header: 1,
+                                defval: null,
+                                raw: false
+                            });
+                            
+                            console.log(`  - 전체 행 수: ${jsonData.length}`);
+                            
+                            if (jsonData.length === 0) {
+                                console.log(`  ⚠️ 빈 시트입니다.`);
+                                continue;
+                            }
+                            
+                            // 시트 데이터 파싱
+                            const products = parseSheetDataImproved(jsonData, sheetName, file.name);
                             
                             if (products.length > 0) {
+                                console.log(`  ✅ ${products.length}개 상품 추출 완료`);
                                 allSheetProducts.push({
                                     sheetName: sheetName,
                                     products: products
                                 });
+                            } else {
+                                console.log(`  ⚠️ 유효한 상품을 찾을 수 없음`);
                             }
                         }
                         
+                        console.log(`\n📊 최종 결과: ${allSheetProducts.length}개 시트에서 데이터 추출`);
                         resolve(allSheetProducts);
+                        
                     } catch (error) {
-                        console.error('파일 파싱 오류:', error);
+                        console.error('❌ 파일 파싱 오류:', error);
                         reject(error);
                     }
                 };
@@ -1323,132 +1381,101 @@
             });
         }
 
-        // 시트 데이터 파싱 (범용)
-        function parseSheetData(data, sheetName, fileName) {
+        // 개선된 시트 데이터 파싱
+        function parseSheetDataImproved(data, sheetName, fileName) {
             const products = [];
             
-            console.log(`  파싱 시작: ${sheetName}`);
+            // 회사명은 시트 이름을 그대로 사용
+            const companyName = sheetName;
+            console.log(`  - 렌탈사: "${companyName}"`);
             
             // 빈 데이터 체크
             if (!data || data.length === 0) {
-                console.log('  빈 시트입니다.');
                 return products;
             }
             
-            // 렌탈사명 추출 (시트명 우선 사용)
-            let companyName = sheetName;
+            // 헤더 찾기 - 더 포괄적으로
+            let headerRow = -1;
+            let headers = [];
             
-            // 시트명에서 직접 회사명 추출
-            const sheetMappings = {
-                'BS렌탈': 'BS렌탈',
-                'BS': 'BS렌탈',
-                '유버스생활가전': '유버스생활가전',
-                '유버스': '유버스생활가전',
-                '스마트렌탈': '스마트렌탈',
-                '스마트': '스마트렌탈',
-                '캐리어': '캐리어',
-                '세라젬': '세라젬',
-                '넥스': '넥스',
-                '렌탈페이': '렌탈페이',
-                '이니렌탈': '이니렌탈',
-                '이니': '이니렌탈',
-                '코오롱렌탈': '코오롱렌탈',
-                '코오롱': '코오롱렌탈',
-                '경동나비엔': '경동나비엔',
-                '경동': '경동나비엔',
-                'LG헬로비전': 'LG헬로비전',
-                'SK매직': 'SK매직',
-                '웅진코웨이': '웅진코웨이',
-                '코웨이': '웅진코웨이'
-            };
-            
-            // 시트명에서 정확한 매칭 찾기
-            for (const [key, value] of Object.entries(sheetMappings)) {
-                if (sheetName === key || sheetName.startsWith(key)) {
-                    companyName = value;
+            // 처음 30행 내에서 헤더 찾기
+            for (let i = 0; i < Math.min(30, data.length); i++) {
+                const row = data[i];
+                if (!row || row.length < 3) continue;
+                
+                // null이 아닌 셀의 개수 세기
+                const nonNullCells = row.filter(cell => cell !== null && cell !== undefined && String(cell).trim() !== '').length;
+                if (nonNullCells < 3) continue;
+                
+                // 헤더 키워드 체크
+                const rowText = row.map(cell => String(cell || '').toLowerCase()).join(' ');
+                
+                // 헤더일 가능성이 있는 키워드들
+                const hasModelKeyword = rowText.includes('모델') || rowText.includes('품번') || rowText.includes('형번');
+                const hasProductKeyword = rowText.includes('상품') || rowText.includes('품명') || rowText.includes('제품');
+                const hasRentalKeyword = rowText.includes('렌탈') || rowText.includes('월') || rowText.includes('요금');
+                const hasCommissionKeyword = rowText.includes('수수료') || rowText.includes('커미션') || rowText.includes('fee');
+                
+                // 2개 이상의 키워드가 있으면 헤더로 인식
+                const keywordCount = [hasModelKeyword, hasProductKeyword, hasRentalKeyword, hasCommissionKeyword].filter(x => x).length;
+                
+                if (keywordCount >= 2) {
+                    headerRow = i;
+                    headers = row.map(h => String(h || '').toLowerCase());
+                    console.log(`  - 헤더 발견: 행 ${i + 1}`);
+                    console.log(`  - 헤더 샘플: ${headers.slice(0, 8).join(' | ')}`);
                     break;
                 }
             }
             
-            // 시트명에서 못 찾으면 파일명에서 찾기
-            if (companyName === sheetName) {
-                for (const [key, value] of Object.entries(sheetMappings)) {
-                    if (fileName.includes(key)) {
-                        companyName = value;
-                        break;
-                    }
-                }
-            }
-            
-            console.log(`  렌탈사: ${companyName} (시트: ${sheetName})`);
-            
-            // 헤더 찾기 - 더 유연한 방식
-            let headerRow = -1;
-            const headerKeywords = ['모델', '상품', '품목', '제품', '렌탈', '수수료', '월료', '품명', '월납', '금액'];
-            
-            for (let i = 0; i < Math.min(data.length, 30); i++) {
-                if (data[i] && data[i].length > 3) {
-                    const row = data[i].map(cell => {
-                        if (cell === null || cell === undefined) return '';
-                        return String(cell).toLowerCase();
-                    });
-                    const rowText = row.join(' ');
-                    
-                    // 키워드 매칭 수 계산
-                    const matchCount = headerKeywords.filter(keyword => 
-                        rowText.includes(keyword)
-                    ).length;
-                    
-                    // 2개 이상 매칭되거나, '모델'이나 '상품' 키워드가 있으면 헤더로 인식
-                    if (matchCount >= 2 || rowText.includes('모델') || rowText.includes('상품')) {
-                        headerRow = i;
-                        console.log(`  헤더 발견: 행 ${i}`);
-                        console.log(`  헤더 내용: ${row.slice(0, 10).join(' | ')}`);
-                        break;
-                    }
-                }
-            }
-            
+            // 헤더를 못 찾은 경우 기본값 사용
             if (headerRow === -1) {
-                console.log(`  헤더를 찾을 수 없음. 기본 구조로 시도...`);
-                // 헤더가 없으면 기본 구조로 가정
+                console.log(`  - 헤더를 찾을 수 없음. 전체 데이터를 스캔합니다.`);
                 headerRow = 0;
+                headers = [];
             }
             
             // 컬럼 인덱스 찾기
-            const headers = data[headerRow] ? 
-                data[headerRow].map(h => {
-                    if (h === null || h === undefined) return '';
-                    return String(h).toLowerCase();
-                }) : [];
-            const columnIndexes = findColumnIndexes(headers);
+            const columnIndexes = findColumnIndexesImproved(headers);
+            console.log(`  - 컬럼 매핑: 모델[${columnIndexes.model}], 상품[${columnIndexes.product}], 렌탈료[${columnIndexes.rental}], 수수료[${columnIndexes.commission}]`);
             
-            console.log(`  컬럼 인덱스: 모델=${columnIndexes.model}, 상품=${columnIndexes.product}, 렌탈료=${columnIndexes.rental}, 수수료=${columnIndexes.commission}`);
+            // 데이터 추출 - 헤더 다음 행부터 끝까지
+            let validRowCount = 0;
+            let skippedRowCount = 0;
             
-            // 데이터 추출
-            let extractedCount = 0;
             for (let i = headerRow + 1; i < data.length; i++) {
                 const row = data[i];
-                if (!row || row.length === 0) continue;
+                if (!row || row.length === 0) {
+                    skippedRowCount++;
+                    continue;
+                }
                 
-                const hasData = row.some(cell => cell && String(cell).trim() !== '');
-                if (!hasData) continue;
+                // 빈 행 체크
+                const nonEmptyCells = row.filter(cell => cell !== null && cell !== undefined && String(cell).trim() !== '').length;
+                if (nonEmptyCells === 0) {
+                    skippedRowCount++;
+                    continue;
+                }
                 
-                const product = extractProductData(row, columnIndexes, companyName, sheetName, fileName);
+                // 상품 데이터 추출
+                const product = extractProductDataImproved(row, columnIndexes, companyName, sheetName, fileName);
                 
-                // 최소한 모델이나 상품명이 있고, 렌탈료가 1000원 이상이면 유효한 데이터로 인식
-                if (product && (product.model || product.product) && product.rental_fee >= 1000) {
-                    products.push(product);
-                    extractedCount++;
-                    
-                    // 처음 몇 개 샘플 로그
-                    if (extractedCount <= 3) {
-                        console.log(`    샘플 ${extractedCount}: ${product.model || product.product} - 렌탈료: ${product.rental_fee}원`);
+                // 유효성 검증 - 최소한 모델이나 상품명이 있고, 렌탈료가 있어야 함
+                if (product && (product.model || product.product)) {
+                    // 렌탈료가 너무 작거나 크면 제외
+                    if (product.rental_fee >= 1000 && product.rental_fee <= 1000000) {
+                        products.push(product);
+                        validRowCount++;
+                        
+                        // 처음 3개 샘플 출력
+                        if (validRowCount <= 3) {
+                            console.log(`    샘플 ${validRowCount}: ${product.model || product.product} | 렌탈료: ${product.rental_fee}원 | 수수료: ${Math.round(product.calculated_commission)}원`);
+                        }
                     }
                 }
             }
             
-            console.log(`  총 ${products.length}개 상품 추출 완료`);
+            console.log(`  - 처리 결과: 유효 ${validRowCount}행, 스킵 ${skippedRowCount}행`);
             return products;
         }
 
@@ -1560,54 +1587,90 @@
             return String(value).trim();
         }
 
-        // 숫자 파싱
+        // 숫자 파싱 (개선된 버전)
         function parseNumber(value) {
             if (value === null || value === undefined || value === '') return 0;
-            const cleaned = String(value).replace(/[^0-9.-]/g, '');
-            const parsed = parseFloat(cleaned);
+            
+            // 이미 숫자인 경우
+            if (typeof value === 'number') {
+                return isNaN(value) ? 0 : value;
+            }
+            
+            // 문자열 처리
+            let str = String(value).trim();
+            
+            // 쉼표, 원 기호 등 제거
+            str = str.replace(/[,원￦$]/g, '');
+            
+            // 괄호 안의 음수 처리
+            if (str.startsWith('(') && str.endsWith(')')) {
+                str = '-' + str.slice(1, -1);
+            }
+            
+            // 숫자와 소수점, 음수 기호만 남기기
+            str = str.replace(/[^0-9.-]/g, '');
+            
+            // 여러 개의 소수점이 있으면 첫 번째만 남기기
+            const parts = str.split('.');
+            if (parts.length > 2) {
+                str = parts[0] + '.' + parts.slice(1).join('');
+            }
+            
+            const parsed = parseFloat(str);
             return isNaN(parsed) ? 0 : parsed;
         }
 
-        // Supabase에 저장
+        // Supabase에 저장 (파일 단위로 대체)
         async function saveToSupabase(products) {
             if (!supabaseClient || products.length === 0) return;
             
             try {
-                // 파일명과 시트명을 조합한 고유 키 생성
-                const uniqueKey = `${products[0].file_name}_${products[0].sheet_name}`;
-                console.log(`  저장 키: ${uniqueKey}`);
-                console.log(`  저장할 데이터: ${products.length}개 (${products[0].company})`);
+                const fileName = products[0].file_name;
+                const sheetName = products[0].sheet_name;
+                const company = products[0].company;
                 
-                // 동일한 파일+시트 조합의 기존 데이터만 삭제
+                console.log(`\n💾 저장 시작:`);
+                console.log(`  파일: ${fileName}`);
+                console.log(`  시트: ${sheetName}`);
+                console.log(`  렌탈사: ${company}`);
+                console.log(`  상품 수: ${products.length}개`);
+                
+                // 해당 파일+시트의 기존 데이터 삭제
                 const deleteResult = await supabaseClient
                     .from('rental_others')
                     .delete()
-                    .eq('sheet_name', products[0].sheet_name)
-                    .eq('file_name', products[0].file_name);
+                    .eq('file_name', fileName)
+                    .eq('sheet_name', sheetName);
                 
                 if (deleteResult.error) {
-                    console.log('기존 데이터 삭제 오류:', deleteResult.error);
+                    console.log('  ⚠️ 기존 데이터 삭제 중 오류 (무시하고 계속):', deleteResult.error.message);
+                } else {
+                    console.log('  ✅ 기존 데이터 삭제 완료');
                 }
                 
                 // 새 데이터 삽입 (배치로 나누어 처리)
                 const batchSize = 100;
                 let savedCount = 0;
+                
                 for (let i = 0; i < products.length; i += batchSize) {
                     const batch = products.slice(i, i + batchSize);
-                    const { error } = await supabaseClient
+                    const { data, error } = await supabaseClient
                         .from('rental_others')
                         .insert(batch);
                     
                     if (error) {
-                        console.error('배치 저장 오류:', error);
+                        console.error(`  ❌ 배치 ${Math.floor(i/batchSize) + 1} 저장 오류:`, error.message);
                         throw error;
                     }
+                    
                     savedCount += batch.length;
+                    console.log(`  📦 배치 ${Math.floor(i/batchSize) + 1}: ${batch.length}개 저장`);
                 }
                 
-                console.log(`✅ ${savedCount}개 상품 저장 완료 (${products[0].company} - ${products[0].sheet_name})`);
+                console.log(`  ✅ 저장 완료: 총 ${savedCount}개 상품\n`);
+                
             } catch (error) {
-                console.error('저장 실패:', error);
+                console.error('❌ 저장 실패:', error);
                 throw error;
             }
         }
