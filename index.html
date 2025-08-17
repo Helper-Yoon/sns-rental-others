@@ -992,8 +992,6 @@
         window.onload = async function() {
             loadCommissionSettings();
             await connectSupabase();
-            // 초기 검색 실행 (전체 상품 표시)
-            await searchProducts();
         };
 
         // 수수료 설정 불러오기
@@ -1196,6 +1194,7 @@
             let processedSheets = 0;
             let totalSheets = 0;
             let fileResults = [];
+            let companyStats = {};
             
             for (const file of files) {
                 try {
@@ -1208,6 +1207,10 @@
                     let fileProductCount = 0;
                     for (const sheetData of products) {
                         if (sheetData.products.length > 0) {
+                            // 렌탈사별 통계
+                            const company = sheetData.products[0].company;
+                            companyStats[company] = (companyStats[company] || 0) + sheetData.products.length;
+                            
                             updateProgress(processedSheets, totalSheets, 
                                 `${sheetData.sheetName} 저장 중... (${sheetData.products.length}개 상품)`);
                             
@@ -1236,10 +1239,23 @@
             
             showLoadingOverlay(false);
             
+            console.log('\n=== 업로드 완료 ===');
+            console.log('렌탈사별 저장 통계:', companyStats);
+            
             // 결과 상세 표시
             let resultMessage = '';
             if (totalProducts > 0) {
                 resultMessage = `<strong>✅ 업로드 완료!</strong><br><br>`;
+                
+                // 렌탈사별 통계 추가
+                if (Object.keys(companyStats).length > 0) {
+                    resultMessage += `<div style="margin-bottom: 15px; padding: 10px; background: rgba(25, 118, 210, 0.1); border-radius: 8px;">`;
+                    resultMessage += `<strong style="color: var(--ajd-blue);">렌탈사별 저장 현황:</strong><br>`;
+                    Object.entries(companyStats).forEach(([company, count]) => {
+                        resultMessage += `<span style="color: var(--text-secondary);">• ${company}: ${count}개</span><br>`;
+                    });
+                    resultMessage += `</div>`;
+                }
             } else {
                 resultMessage = `<strong>⚠️ 데이터를 찾을 수 없습니다</strong><br>`;
                 resultMessage += `<small>브라우저 콘솔(F12)에서 상세 로그를 확인하세요</small><br><br>`;
@@ -1256,6 +1272,11 @@
             showStatus('uploadStatus', resultMessage, totalProducts > 0 ? 'success' : 'error');
             
             await loadStats();
+            
+            // 저장 후 자동으로 검색 새로고침
+            if (totalProducts > 0) {
+                await searchProducts();
+            }
         }
 
         // 엑셀 파일 파싱 (모든 시트 처리)
@@ -1314,13 +1335,15 @@
                 return products;
             }
             
-            // 렌탈사명 추출 (시트명 또는 파일명에서)
+            // 렌탈사명 추출 (시트명 우선 사용)
             let companyName = sheetName;
             
-            // 시트명을 그대로 사용하되, 특정 패턴만 변환
-            const companyMappings = {
+            // 시트명에서 직접 회사명 추출
+            const sheetMappings = {
                 'BS렌탈': 'BS렌탈',
                 'BS': 'BS렌탈',
+                '유버스생활가전': '유버스생활가전',
+                '유버스': '유버스생활가전',
                 '스마트렌탈': '스마트렌탈',
                 '스마트': '스마트렌탈',
                 '캐리어': '캐리어',
@@ -1329,8 +1352,6 @@
                 '렌탈페이': '렌탈페이',
                 '이니렌탈': '이니렌탈',
                 '이니': '이니렌탈',
-                '유버스생활가전': '유버스생활가전',
-                '유버스': '유버스생활가전',
                 '코오롱렌탈': '코오롱렌탈',
                 '코오롱': '코오롱렌탈',
                 '경동나비엔': '경동나비엔',
@@ -1341,15 +1362,25 @@
                 '코웨이': '웅진코웨이'
             };
             
-            // 매핑 확인
-            for (const [key, value] of Object.entries(companyMappings)) {
-                if (sheetName.includes(key) || fileName.includes(key)) {
+            // 시트명에서 정확한 매칭 찾기
+            for (const [key, value] of Object.entries(sheetMappings)) {
+                if (sheetName === key || sheetName.startsWith(key)) {
                     companyName = value;
                     break;
                 }
             }
             
-            console.log(`  렌탈사: ${companyName}`);
+            // 시트명에서 못 찾으면 파일명에서 찾기
+            if (companyName === sheetName) {
+                for (const [key, value] of Object.entries(sheetMappings)) {
+                    if (fileName.includes(key)) {
+                        companyName = value;
+                        break;
+                    }
+                }
+            }
+            
+            console.log(`  렌탈사: ${companyName} (시트: ${sheetName})`);
             
             // 헤더 찾기 - 더 유연한 방식
             let headerRow = -1;
@@ -1542,28 +1573,39 @@
             if (!supabaseClient || products.length === 0) return;
             
             try {
-                // 같은 sheet_name과 file_name의 기존 데이터 삭제
-                const sheetName = products[0].sheet_name;
-                const fileName = products[0].file_name;
+                // 파일명과 시트명을 조합한 고유 키 생성
+                const uniqueKey = `${products[0].file_name}_${products[0].sheet_name}`;
+                console.log(`  저장 키: ${uniqueKey}`);
+                console.log(`  저장할 데이터: ${products.length}개 (${products[0].company})`);
                 
-                await supabaseClient
+                // 동일한 파일+시트 조합의 기존 데이터만 삭제
+                const deleteResult = await supabaseClient
                     .from('rental_others')
                     .delete()
-                    .eq('sheet_name', sheetName)
-                    .eq('file_name', fileName);
+                    .eq('sheet_name', products[0].sheet_name)
+                    .eq('file_name', products[0].file_name);
+                
+                if (deleteResult.error) {
+                    console.log('기존 데이터 삭제 오류:', deleteResult.error);
+                }
                 
                 // 새 데이터 삽입 (배치로 나누어 처리)
                 const batchSize = 100;
+                let savedCount = 0;
                 for (let i = 0; i < products.length; i += batchSize) {
                     const batch = products.slice(i, i + batchSize);
                     const { error } = await supabaseClient
                         .from('rental_others')
                         .insert(batch);
                     
-                    if (error) throw error;
+                    if (error) {
+                        console.error('배치 저장 오류:', error);
+                        throw error;
+                    }
+                    savedCount += batch.length;
                 }
                 
-                console.log(`${products.length}개 상품 저장 완료 (${sheetName})`);
+                console.log(`✅ ${savedCount}개 상품 저장 완료 (${products[0].company} - ${products[0].sheet_name})`);
             } catch (error) {
                 console.error('저장 실패:', error);
                 throw error;
@@ -1597,12 +1639,21 @@
                     query = query.eq('company', currentFilter);
                 }
                 
+                // 수수료 높은 순으로 정렬 (영업 우선순위)
                 const { data, error } = await query
-                    .order('model')
-                    .order('months')
-                    .order('calculated_commission', { ascending: true });
+                    .order('calculated_commission', { ascending: false })
+                    .order('rental_fee', { ascending: true });
                 
                 if (error) throw error;
+                
+                console.log(`검색 결과: ${data ? data.length : 0}개`);
+                
+                // 렌탈사별 데이터 확인
+                const companyCounts = {};
+                (data || []).forEach(product => {
+                    companyCounts[product.company] = (companyCounts[product.company] || 0) + 1;
+                });
+                console.log('렌탈사별 검색 결과:', companyCounts);
                 
                 // 모델별로 그룹화
                 const groupedProducts = groupProductsByModel(data || []);
@@ -1632,16 +1683,19 @@
                 grouped[key].push(product);
             });
             
-            // 각 그룹 내에서 회사별, 계약기간별로 정렬
+            // 각 그룹 내에서 수수료 높은 순, 렌탈료 낮은 순으로 정렬
             Object.keys(grouped).forEach(key => {
                 grouped[key].sort((a, b) => {
-                    if (a.company !== b.company) {
-                        return a.company.localeCompare(b.company);
+                    // 1차: 수수료 높은 순
+                    if (a.calculated_commission !== b.calculated_commission) {
+                        return b.calculated_commission - a.calculated_commission;
                     }
-                    if (a.months !== b.months) {
-                        return a.months - b.months;
+                    // 2차: 렌탈료 낮은 순
+                    if (a.rental_fee !== b.rental_fee) {
+                        return a.rental_fee - b.rental_fee;
                     }
-                    return a.calculated_commission - b.calculated_commission;
+                    // 3차: 회사명
+                    return a.company.localeCompare(b.company);
                 });
             });
             
@@ -1695,15 +1749,19 @@
                     byCompany[p.company].push(p);
                 });
                 
-                // 최저가 찾기
-                const lowestPrice = Math.min(...products.map(p => p.calculated_commission));
-                const lowestProduct = products.find(p => p.calculated_commission === lowestPrice);
+                // 최고 수수료 찾기 (영업 우선순위)
+                const highestCommission = Math.max(...products.map(p => p.calculated_commission));
+                const highestProduct = products.find(p => p.calculated_commission === highestCommission);
+                
+                // 최저 렌탈료 찾기
+                const lowestRental = Math.min(...products.map(p => p.rental_fee));
+                const lowestRentalProduct = products.find(p => p.rental_fee === lowestRental);
                 
                 return `
                     <div class="product-card" style="position: relative;">
-                        ${lowestProduct && lowestProduct.company ? `
-                            <div style="position: absolute; top: 10px; right: 10px; background: #4CAF50; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75em;">
-                                최저가: ${lowestProduct.company}
+                        ${highestProduct && highestProduct.company ? `
+                            <div style="position: absolute; top: 10px; right: 10px; background: #FFB300; color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.75em;">
+                                최고수수료: ${highestProduct.company}
                             </div>
                         ` : ''}
                         
@@ -1715,12 +1773,22 @@
                                 <strong>🏢 렌탈사별 옵션</strong> (${Object.keys(byCompany).length}개 업체)
                             </div>
                             
-                            ${Object.entries(byCompany).map(([company, companyProducts]) => {
-                                const lowestInCompany = Math.min(...companyProducts.map(p => p.calculated_commission));
-                                const isLowestCompany = companyProducts.some(p => p.calculated_commission === lowestPrice);
+                            ${Object.entries(byCompany)
+                                .sort((a, b) => {
+                                    // 회사별 최고 수수료로 정렬
+                                    const maxA = Math.max(...a[1].map(p => p.calculated_commission));
+                                    const maxB = Math.max(...b[1].map(p => p.calculated_commission));
+                                    return maxB - maxA;
+                                })
+                                .map(([company, companyProducts]) => {
+                                const hasHighest = companyProducts.some(p => p.calculated_commission === highestCommission);
+                                const hasLowestRental = companyProducts.some(p => p.rental_fee === lowestRental);
+                                
+                                // 회사 내 상품을 수수료 높은 순으로 정렬
+                                companyProducts.sort((a, b) => b.calculated_commission - a.calculated_commission);
                                 
                                 return `
-                                <div style="margin-bottom: 10px; padding: 10px; background: var(--dark-surface); border-radius: 8px; ${isLowestCompany ? 'border: 1px solid #4CAF50;' : ''}">
+                                <div style="margin-bottom: 10px; padding: 10px; background: var(--dark-surface); border-radius: 8px; ${hasHighest ? 'border: 1px solid #FFB300;' : ''}">
                                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
                                         <span class="company-badge" style="font-size: 0.8em; padding: 4px 10px;">${company}</span>
                                         <span style="font-size: 0.85em; color: var(--text-dim);">
@@ -1729,22 +1797,24 @@
                                     </div>
                                     
                                     ${companyProducts.map(p => {
-                                        const isLowest = p.calculated_commission === lowestPrice;
+                                        const isHighest = p.calculated_commission === highestCommission;
+                                        const isLowestRental = p.rental_fee === lowestRental;
                                         return `
-                                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 5px 0; font-size: 0.9em; ${isLowest ? 'background: rgba(76, 175, 80, 0.1); padding: 5px; border-radius: 4px;' : ''}">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 5px 0; font-size: 0.9em; ${isHighest ? 'background: rgba(255, 179, 0, 0.1); padding: 5px; border-radius: 4px;' : ''}">
                                             <div style="display: flex; gap: 15px; align-items: center;">
                                                 <span style="color: var(--text-secondary);">
                                                     ${p.months}개월
                                                 </span>
-                                                <span style="color: var(--text-primary);">
+                                                <span style="color: ${isLowestRental ? '#4CAF50' : 'var(--text-primary)'};">
                                                     월 ${p.rental_fee.toLocaleString()}원
+                                                    ${isLowestRental ? '<span style="font-size: 0.75em;">(최저)</span>' : ''}
                                                 </span>
                                             </div>
                                             <div style="text-align: right;">
-                                                <span style="color: ${isLowest ? '#4CAF50' : 'var(--ajd-blue-light)'}; font-weight: 600;">
+                                                <span style="color: ${isHighest ? '#FFB300' : 'var(--ajd-blue-light)'}; font-weight: 600;">
                                                     수수료 ${Math.round(p.calculated_commission).toLocaleString()}원
                                                 </span>
-                                                ${isLowest ? '<br><span style="font-size: 0.75em; color: #4CAF50;">최저가</span>' : ''}
+                                                ${isHighest ? '<br><span style="font-size: 0.75em; color: #FFB300;">최고수수료</span>' : ''}
                                             </div>
                                         </div>
                                     `}).join('')}
@@ -1774,11 +1844,21 @@
                     .from('rental_others')
                     .select('*', { count: 'exact', head: true });
                 
-                // 회사 수
+                // 회사별 데이터 가져오기
                 const { data: companies } = await supabaseClient
                     .from('rental_others')
                     .select('company')
-                    .limit(5000);
+                    .limit(10000);
+                
+                // 회사별 통계
+                const companyStats = {};
+                companies?.forEach(item => {
+                    companyStats[item.company] = (companyStats[item.company] || 0) + 1;
+                });
+                
+                console.log('=== 데이터베이스 통계 ===');
+                console.log(`총 상품 수: ${totalCount}`);
+                console.log('렌탈사별 상품 수:', companyStats);
                 
                 const uniqueCompanies = new Set(companies?.map(c => c.company) || []);
                 
