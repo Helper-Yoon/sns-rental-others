@@ -1394,7 +1394,10 @@
                 return products;
             }
             
-            // 헤더 찾기 - 더 포괄적으로
+            // 데이터가 충분한지 확인
+            console.log(`  - 총 ${data.length}개 행 발견`);
+            
+            // 헤더 찾기 - 더 유연하게
             let headerRow = -1;
             let headers = [];
             
@@ -1410,29 +1413,60 @@
                 // 헤더 키워드 체크
                 const rowText = row.map(cell => String(cell || '').toLowerCase()).join(' ');
                 
-                // 헤더일 가능성이 있는 키워드들
-                const hasModelKeyword = rowText.includes('모델') || rowText.includes('품번') || rowText.includes('형번');
-                const hasProductKeyword = rowText.includes('상품') || rowText.includes('품명') || rowText.includes('제품');
-                const hasRentalKeyword = rowText.includes('렌탈') || rowText.includes('월') || rowText.includes('요금');
-                const hasCommissionKeyword = rowText.includes('수수료') || rowText.includes('커미션') || rowText.includes('fee');
+                // 헤더일 가능성이 있는 키워드들 (더 많은 키워드 추가)
+                const hasModelKeyword = rowText.includes('모델') || rowText.includes('품번') || rowText.includes('형번') || 
+                                       rowText.includes('코드') || rowText.includes('제품번호');
+                const hasProductKeyword = rowText.includes('상품') || rowText.includes('품명') || rowText.includes('제품') || 
+                                         rowText.includes('품목') || rowText.includes('제품명');
+                const hasRentalKeyword = rowText.includes('렌탈') || rowText.includes('월') || rowText.includes('요금') || 
+                                        rowText.includes('금액') || rowText.includes('료');
+                const hasCommissionKeyword = rowText.includes('수수료') || rowText.includes('커미션') || rowText.includes('fee') || 
+                                            rowText.includes('지원금') || rowText.includes('지급') || rowText.includes('판매');
                 
-                // 2개 이상의 키워드가 있으면 헤더로 인식
+                // 1개 이상의 키워드가 있으면 헤더 가능성 있음
                 const keywordCount = [hasModelKeyword, hasProductKeyword, hasRentalKeyword, hasCommissionKeyword].filter(x => x).length;
                 
-                if (keywordCount >= 2) {
-                    headerRow = i;
-                    headers = row.map(h => String(h || '').toLowerCase());
-                    console.log(`  - 헤더 발견: 행 ${i + 1}`);
-                    console.log(`  - 헤더 샘플: ${headers.slice(0, 8).join(' | ')}`);
-                    break;
+                if (keywordCount >= 1) {
+                    // 텍스트 셀이 많으면 헤더일 가능성 높음
+                    const textCells = row.filter(cell => {
+                        if (!cell) return false;
+                        const str = String(cell).trim();
+                        // 숫자가 아니고, 빈 문자열이 아닌 경우
+                        return str && (isNaN(str) || str.length > 4) && str.length > 0;
+                    }).length;
+                    
+                    if (textCells >= 2 || keywordCount >= 2) {
+                        headerRow = i;
+                        headers = row.map(h => String(h || '').toLowerCase());
+                        console.log(`  - 헤더 발견: 행 ${i + 1} (키워드: ${keywordCount}개, 텍스트 셀: ${textCells}개)`);
+                        console.log(`  - 헤더 내용: ${headers.filter(h => h).slice(0, 10).join(' | ')}`);
+                        break;
+                    }
                 }
             }
             
-            // 헤더를 못 찾은 경우 기본값 사용
+            // 헤더를 못 찾은 경우 첫 번째 유효한 행을 헤더로 가정
             if (headerRow === -1) {
-                console.log(`  - 헤더를 찾을 수 없음. 전체 데이터를 스캔합니다.`);
+                console.log(`  - 명확한 헤더를 찾을 수 없음. 첫 번째 유효한 행을 헤더로 사용합니다.`);
+                for (let i = 0; i < Math.min(10, data.length); i++) {
+                    const row = data[i];
+                    if (row && row.length >= 3) {
+                        const nonNullCells = row.filter(cell => cell !== null && cell !== undefined && String(cell).trim() !== '').length;
+                        if (nonNullCells >= 3) {
+                            headerRow = i;
+                            headers = row.map(h => String(h || '').toLowerCase());
+                            console.log(`  - 대체 헤더 사용: 행 ${i + 1}`);
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // 그래도 못 찾으면 기본값 사용
+            if (headerRow === -1) {
                 headerRow = 0;
                 headers = [];
+                console.log(`  - 헤더를 찾을 수 없음. 데이터 분석 모드로 전환.`);
             }
             
             // 컬럼 인덱스 찾기
@@ -1469,7 +1503,7 @@
                         
                         // 처음 3개 샘플 출력
                         if (validRowCount <= 3) {
-                            console.log(`    샘플 ${validRowCount}: ${product.model || product.product} | 렌탈료: ${product.rental_fee}원 | 수수료: ${Math.round(product.calculated_commission)}원`);
+                            console.log(`    샘플 ${validRowCount}: ${product.model || product.product} | ${product.months}개월 | 렌탈료: ${product.rental_fee}원 | 수수료: ${Math.round(product.calculated_commission)}원`);
                         }
                     }
                 }
@@ -1482,19 +1516,20 @@
         // 컬럼 인덱스 찾기
         function findColumnIndexes(headers) {
             const indexes = {
-                model: findColumnIndex(headers, ['모델명', '모델코드', '모델', 'model', '형번', '품번']),
-                product: findColumnIndex(headers, ['상품명', '상품', '제품명', '제품', '품목', '품명', '모델명', '상품설명']),
-                as: findColumnIndex(headers, ['a/s', 'as', '서비스', '케어', '무상', '보증', '무상a/s', '무상as']),
-                rental: findColumnIndex(headers, ['렌탈료', '월렌탈', '렌탈', '월료', '월납입료', '36개월', '월', '월납', '렌탈금액', '렌털료']),
-                commission: findColumnIndex(headers, ['수수료', '영업수수료', '판매수수료', '커미션', 'fee', '수수료(vat포함)', 'vat포함']),
-                months: findColumnIndex(headers, ['개월', '계약기간', '기간', '약정', '계약개월'])
+                model: findColumnIndex(headers, ['모델명', '모델코드', '모델', 'model', '형번', '품번', '제품코드', '상품코드']),
+                product: findColumnIndex(headers, ['상품명', '상품', '제품명', '제품', '품목', '품명', '모델명', '상품설명', '상품정보']),
+                as: findColumnIndex(headers, ['a/s', 'as', '서비스', '케어', '무상', '보증', '무상a/s', '무상as', '무상서비스']),
+                rental: findColumnIndex(headers, ['렌탈료', '월렌탈', '렌탈', '월료', '월납입료', '36개월', '월', '월납', '렌탈금액', '렌털료', '월요금', '월 렌탈료']),
+                commission: findColumnIndex(headers, ['수수료', '영업수수료', '판매수수료', '커미션', 'fee', '수수료(vat포함)', 'vat포함', '지원금', '지급수수료']),
+                months: findColumnIndex(headers, ['개월', '계약기간', '기간', '약정', '계약개월', '개월수', '렌탈기간'])
             };
             
             // 모델과 상품이 모두 없으면, 첫 번째 텍스트 컬럼을 모델로 가정
             if (indexes.model === -1 && indexes.product === -1) {
                 for (let i = 0; i < headers.length; i++) {
-                    if (headers[i] && headers[i].length > 0) {
+                    if (headers[i] && headers[i].length > 0 && !headers[i].includes('번호') && !headers[i].includes('no')) {
                         indexes.model = i;
+                        console.log(`    - 기본 모델 컬럼으로 ${i}번 사용`);
                         break;
                     }
                 }
@@ -1504,8 +1539,9 @@
             if (indexes.rental === -1) {
                 for (let i = 0; i < headers.length; i++) {
                     const header = headers[i];
-                    if (header && (header.includes('월') || header.includes('36') || header.includes('금액'))) {
+                    if (header && (header.includes('월') || header.includes('36') || header.includes('금액') || header.includes('료'))) {
                         indexes.rental = i;
+                        console.log(`    - 대체 렌탈료 컬럼으로 ${i}번 사용`);
                         break;
                     }
                 }
@@ -1514,16 +1550,26 @@
             return indexes;
         }
 
-        // 특정 컬럼 찾기
+        // 특정 컬럼 찾기 (개선된 버전)
         function findColumnIndex(headers, keywords) {
+            // 먼저 정확히 일치하는 것 찾기
             for (let keyword of keywords) {
                 const index = headers.findIndex(h => {
-                    // undefined나 null 체크
+                    if (!h || typeof h !== 'string') return false;
+                    return h === keyword.toLowerCase();
+                });
+                if (index !== -1) return index;
+            }
+            
+            // 포함하는 것 찾기
+            for (let keyword of keywords) {
+                const index = headers.findIndex(h => {
                     if (!h || typeof h !== 'string') return false;
                     return h.includes(keyword.toLowerCase());
                 });
                 if (index !== -1) return index;
             }
+            
             return -1;
         }
 
@@ -1534,7 +1580,21 @@
             const as_info = getValueFromRow(row, columnIndexes.as);
             let rental_fee = parseNumber(getValueFromRow(row, columnIndexes.rental));
             let original_commission = parseNumber(getValueFromRow(row, columnIndexes.commission));
-            const months = parseNumber(getValueFromRow(row, columnIndexes.months)) || 36;
+            let months = parseNumber(getValueFromRow(row, columnIndexes.months));
+            
+            // 개월 수가 없으면 다른 컬럼에서 찾기
+            if (!months || months === 0) {
+                // 헤더나 다른 컬럼에서 36, 48, 60 등의 숫자 찾기
+                for (let i = 0; i < row.length; i++) {
+                    const val = parseNumber(row[i]);
+                    if (val === 36 || val === 48 || val === 60 || val === 24 || val === 12) {
+                        months = val;
+                        break;
+                    }
+                }
+                // 그래도 없으면 기본값 36
+                if (!months) months = 36;
+            }
             
             // 렌탈료가 없으면 다른 컬럼에서 10000~500000 범위의 숫자 찾기
             if (rental_fee === 0 && row && row.length > 0) {
@@ -1702,9 +1762,9 @@
                     query = query.eq('company', currentFilter);
                 }
                 
-                // 수수료 높은 순으로 정렬 (영업 우선순위)
+                // 개월 수 오름차순, 렌탈료 오름차순으로 정렬
                 const { data, error } = await query
-                    .order('calculated_commission', { ascending: false })
+                    .order('months', { ascending: true })
                     .order('rental_fee', { ascending: true });
                 
                 if (error) throw error;
@@ -1746,14 +1806,14 @@
                 grouped[key].push(product);
             });
             
-            // 각 그룹 내에서 수수료 높은 순, 렌탈료 낮은 순으로 정렬
+            // 각 그룹 내에서 개월 수 오름차순, 렌탈료 오름차순으로 정렬
             Object.keys(grouped).forEach(key => {
                 grouped[key].sort((a, b) => {
-                    // 1차: 수수료 높은 순
-                    if (a.calculated_commission !== b.calculated_commission) {
-                        return b.calculated_commission - a.calculated_commission;
+                    // 1차: 개월 수 오름차순
+                    if (a.months !== b.months) {
+                        return a.months - b.months;
                     }
-                    // 2차: 렌탈료 낮은 순
+                    // 2차: 렌탈료 오름차순
                     if (a.rental_fee !== b.rental_fee) {
                         return a.rental_fee - b.rental_fee;
                     }
@@ -1847,8 +1907,15 @@
                                 const hasHighest = companyProducts.some(p => p.calculated_commission === highestCommission);
                                 const hasLowestRental = companyProducts.some(p => p.rental_fee === lowestRental);
                                 
-                                // 회사 내 상품을 수수료 높은 순으로 정렬
-                                companyProducts.sort((a, b) => b.calculated_commission - a.calculated_commission);
+                                // 회사 내 상품을 개월 수 오름차순으로 정렬
+                                companyProducts.sort((a, b) => {
+                                    // 1차: 개월 수 오름차순
+                                    if (a.months !== b.months) {
+                                        return a.months - b.months;
+                                    }
+                                    // 2차: 렌탈료 오름차순
+                                    return a.rental_fee - b.rental_fee;
+                                });
                                 
                                 return `
                                 <div style="margin-bottom: 10px; padding: 10px; background: var(--dark-surface); border-radius: 8px; ${hasHighest ? 'border: 1px solid #FFB300;' : ''}">
@@ -1865,7 +1932,7 @@
                                         return `
                                         <div style="display: flex; justify-content: space-between; align-items: center; padding: 5px 0; font-size: 0.9em; ${isHighest ? 'background: rgba(255, 179, 0, 0.1); padding: 5px; border-radius: 4px;' : ''}">
                                             <div style="display: flex; gap: 15px; align-items: center;">
-                                                <span style="color: var(--text-secondary);">
+                                                <span style="color: var(--ajd-blue-light); font-weight: 600;">
                                                     ${p.months}개월
                                                 </span>
                                                 <span style="color: ${isLowestRental ? '#4CAF50' : 'var(--text-primary)'};">
