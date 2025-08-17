@@ -734,24 +734,6 @@
             color: var(--ajd-blue);
             transform: translateX(5px);
         }
-        
-        /* 로고 영역 */
-        .logo-area {
-            display: inline-flex;
-            align-items: center;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-        
-        .logo-text {
-            font-size: 1.2em;
-            font-weight: 700;
-            color: var(--ajd-blue);
-            padding: 8px 16px;
-            background: rgba(25, 118, 210, 0.1);
-            border-radius: 10px;
-            border: 1px solid rgba(25, 118, 210, 0.3);
-        }
     </style>
 </head>
 <body>
@@ -773,9 +755,6 @@
             <div id="connectionStatus" class="connection-status status-disconnected">
                 <span class="status-dot"></span>
                 <span>연결 대기</span>
-            </div>
-            <div class="logo-area">
-                <span class="logo-text">아정당</span>
             </div>
             <h1>SNS센터 렌탈견적 시스템 - 대형가전편</h1>
             <p class="subtitle">모든 렌탈사의 상품을 한 곳에서 검색하고 수수료를 실시간으로 확인하세요</p>
@@ -1350,7 +1329,10 @@
             
             for (let i = 0; i < Math.min(data.length, 30); i++) {
                 if (data[i] && data[i].length > 3) {
-                    const row = data[i].map(cell => String(cell || '').toLowerCase());
+                    const row = data[i].map(cell => {
+                        if (cell === null || cell === undefined) return '';
+                        return String(cell).toLowerCase();
+                    });
                     const rowText = row.join(' ');
                     
                     // 키워드 매칭 수 계산
@@ -1375,7 +1357,11 @@
             }
             
             // 컬럼 인덱스 찾기
-            const headers = data[headerRow] ? data[headerRow].map(h => String(h || '').toLowerCase()) : [];
+            const headers = data[headerRow] ? 
+                data[headerRow].map(h => {
+                    if (h === null || h === undefined) return '';
+                    return String(h).toLowerCase();
+                }) : [];
             const columnIndexes = findColumnIndexes(headers);
             
             console.log(`  컬럼 인덱스: 모델=${columnIndexes.model}, 상품=${columnIndexes.product}, 렌탈료=${columnIndexes.rental}, 수수료=${columnIndexes.commission}`);
@@ -1445,7 +1431,11 @@
         // 특정 컬럼 찾기
         function findColumnIndex(headers, keywords) {
             for (let keyword of keywords) {
-                const index = headers.findIndex(h => h.includes(keyword.toLowerCase()));
+                const index = headers.findIndex(h => {
+                    // undefined나 null 체크
+                    if (!h || typeof h !== 'string') return false;
+                    return h.includes(keyword.toLowerCase());
+                });
                 if (index !== -1) return index;
             }
             return -1;
@@ -1461,23 +1451,27 @@
             const months = parseNumber(getValueFromRow(row, columnIndexes.months)) || 36;
             
             // 렌탈료가 없으면 다른 컬럼에서 10000~500000 범위의 숫자 찾기
-            if (rental_fee === 0) {
+            if (rental_fee === 0 && row && row.length > 0) {
                 for (let i = 3; i < row.length; i++) {
-                    const val = parseNumber(row[i]);
-                    if (val >= 10000 && val <= 500000) {
-                        rental_fee = val;
-                        break;
+                    if (row[i] !== null && row[i] !== undefined) {
+                        const val = parseNumber(row[i]);
+                        if (val >= 10000 && val <= 500000) {
+                            rental_fee = val;
+                            break;
+                        }
                     }
                 }
             }
             
             // 수수료가 없으면 다른 컬럼에서 50000 이상의 숫자 찾기
-            if (original_commission === 0) {
+            if (original_commission === 0 && row && row.length > 0) {
                 for (let i = 5; i < row.length; i++) {
-                    const val = parseNumber(row[i]);
-                    if (val >= 50000 && val <= 10000000) {
-                        original_commission = val;
-                        break;
+                    if (row[i] !== null && row[i] !== undefined) {
+                        const val = parseNumber(row[i]);
+                        if (val >= 50000 && val <= 10000000) {
+                            original_commission = val;
+                            break;
+                        }
                     }
                 }
             }
@@ -1501,16 +1495,18 @@
 
         // 값 추출 헬퍼 함수
         function getValueFromRow(row, index) {
-            if (index === -1 || index >= row.length) return '';
+            if (!row || index === -1 || index >= row.length) return '';
             const value = row[index];
-            return value ? String(value).trim() : '';
+            if (value === null || value === undefined) return '';
+            return String(value).trim();
         }
 
         // 숫자 파싱
         function parseNumber(value) {
-            if (!value) return 0;
+            if (value === null || value === undefined || value === '') return 0;
             const cleaned = String(value).replace(/[^0-9.-]/g, '');
-            return parseFloat(cleaned) || 0;
+            const parsed = parseFloat(cleaned);
+            return isNaN(parsed) ? 0 : parsed;
         }
 
         // Supabase에 저장
