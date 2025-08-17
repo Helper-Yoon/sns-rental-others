@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SNS센터 렌탈견적 시스템 - 기타렌탈 편</title>
+    <title>SNS센터 렌탈견적 시스템 - 대형가전편</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
@@ -777,7 +777,7 @@
             <div class="logo-area">
                 <span class="logo-text">아정당</span>
             </div>
-            <h1>SNS센터 렌탈견적 시스템 - 기타렌탈 편</h1>
+            <h1>SNS센터 렌탈견적 시스템 - 대형가전편</h1>
             <p class="subtitle">모든 렌탈사의 상품을 한 곳에서 검색하고 수수료를 실시간으로 확인하세요</p>
         </div>
 
@@ -809,10 +809,9 @@
                     <button class="filter-btn" onclick="filterByCompany('스마트렌탈')">스마트렌탈</button>
                     <button class="filter-btn" onclick="filterByCompany('캐리어')">캐리어</button>
                     <button class="filter-btn" onclick="filterByCompany('세라젬')">세라젬</button>
-                    <button class="filter-btn" onclick="filterByCompany('헬로비전')">헬로비전</button>
-                    <button class="filter-btn" onclick="filterByCompany('카피렌탈')">카피렌탈</button>
-                    <button class="filter-btn" onclick="filterByCompany('현대렌탈')">현대렌탈</button>
+                    <button class="filter-btn" onclick="filterByCompany('넥스')">넥스</button>
                     <button class="filter-btn" onclick="filterByCompany('렌탈페이')">렌탈페이</button>
+                    <button class="filter-btn" onclick="filterByCompany('이니렌탈')">이니렌탈</button>
                 </div>
                 
                 <div class="stats-grid" id="statsGrid">
@@ -850,39 +849,37 @@
                     <h3 style="margin-bottom: 10px; color: var(--text-primary);">파일을 드래그하거나 클릭하여 선택</h3>
                     <p style="color: var(--text-secondary);">엑셀 파일의 모든 시트가 자동으로 분석됩니다</p>
                     <p style="color: var(--ajd-blue); margin-top: 10px; font-weight: 600;">
-                        대형가전_RH, 대형가전_코맨, 카피렌탈, 캐리어 등 모든 형식 지원
+                        대형가전_RH, 대형가전_코맨 등 모든 형식 지원
                     </p>
                 </div>
                 
                 <div id="uploadStatus"></div>
                 
                 <div style="margin-top: 30px;">
-                    <h3 style="margin-bottom: 15px; color: var(--text-primary);">📝 지원 파일 목록</h3>
+                    <h3 style="margin-bottom: 15px; color: var(--text-primary);">📝 지원 렌탈사 목록</h3>
                     <div class="supported-files">
-                        <div class="file-item">✅ 대형가전_RH</div>
-                        <div class="file-item">✅ 대형가전_코맨</div>
-                        <div class="file-item">✅ 카피렌탈</div>
-                        <div class="file-item">✅ 캐리어_코맨</div>
-                        <div class="file-item">✅ 헬로비전_지엘</div>
-                        <div class="file-item">✅ 헬로비전_코맨</div>
-                        <div class="file-item">✅ 현대렌탈_유버스</div>
+                        <div class="file-item">✅ BS렌탈</div>
+                        <div class="file-item">✅ 스마트렌탈</div>
+                        <div class="file-item">✅ 캐리어</div>
+                        <div class="file-item">✅ 세라젬</div>
+                        <div class="file-item">✅ 넥스</div>
+                        <div class="file-item">✅ 렌탈페이</div>
+                        <div class="file-item">✅ 이니렌탈</div>
+                        <div class="file-item">✅ 코오롱렌탈</div>
+                        <div class="file-item">✅ 경동나비엔</div>
+                        <div class="file-item">✅ LG헬로비전</div>
+                        <div class="file-item">✅ SK매직</div>
+                        <div class="file-item">✅ 웅진코웨이</div>
                     </div>
                     <div style="margin-top: 20px; padding: 15px; background: var(--dark-card); border-radius: 10px; border: 1px solid rgba(25, 118, 210, 0.2);">
-                        <h4 style="color: var(--ajd-blue); margin-bottom: 10px;">💡 헬로비전 수수료 계산 방식</h4>
+                        <h4 style="color: var(--ajd-blue); margin-bottom: 10px;">💡 파일 처리 방식</h4>
                         <p style="color: var(--text-secondary); font-size: 0.9em; line-height: 1.6;">
-                            헬로비전은 특별한 수수료 계산 방식을 사용합니다:<br>
-                            <strong style="color: var(--ajd-blue-light);">수수료 = 정상렌탈료 × 36개월 × 0.22 ÷ 1.1</strong><br>
-                            다른 렌탈사와 달리 원본 수수료 없이 렌탈료 기준으로 직접 계산합니다.
+                            • 각 시트별로 자동 분석 및 렌탈사 인식<br>
+                            • 헤더 위치 자동 탐색 (1~10행 내)<br>
+                            • 모델명, 상품명, 렌탈료, 수수료 자동 추출<br>
+                            • 계산된 수수료 = 원본수수료 ÷ 1.1<br>
+                            • 중복 데이터 자동 업데이트
                         </p>
-                        <div style="margin-top: 15px; padding: 10px; background: rgba(25, 118, 210, 0.1); border-radius: 8px;">
-                            <p style="color: var(--ajd-blue-light); font-size: 0.85em; margin: 0;">
-                                <strong>지원 파일:</strong><br>
-                                • 헬로비전_지엘_렌탈상품팀_상품리스트<br>
-                                • 헬로비전_코맨_헬로비전최신본<br>
-                                • 통합(일반,직영) 시트 자동 처리<br>
-                                • 1,000개 이상 상품 데이터 처리 가능
-                            </p>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -897,7 +894,7 @@
                 <div class="commission-settings">
                     <h3 style="margin-bottom: 5px; color: var(--text-primary);">💰 수수료 계산 설정</h3>
                     <p style="color: var(--text-secondary); font-size: 0.9em; margin-bottom: 20px;">
-                        각 렌탈사별 수수료 계산 방식을 설정합니다. 변경 후 "설정 저장" 버튼을 클릭하세요.
+                        수수료 계산 방식을 설정합니다. 변경 후 "설정 저장" 버튼을 클릭하세요.
                     </p>
                     
                     <div class="settings-grid">
@@ -911,45 +908,6 @@
                                    onchange="updateFormulas()">
                             <div class="formula-display" id="normalFormula">
                                 수수료 ÷ 1.1
-                            </div>
-                        </div>
-                        
-                        <div class="setting-item">
-                            <div class="setting-label">헬로비전 곱하기 값</div>
-                            <input type="number" 
-                                   id="helloMultiplier" 
-                                   class="setting-input" 
-                                   value="0.22" 
-                                   step="0.01"
-                                   onchange="updateFormulas()">
-                            <div class="formula-display" id="helloFormula1">
-                                정상렌탈료 × 36개월 × 0.22
-                            </div>
-                        </div>
-                        
-                        <div class="setting-item">
-                            <div class="setting-label">헬로비전 나누기 값</div>
-                            <input type="number" 
-                                   id="helloDivisor" 
-                                   class="setting-input" 
-                                   value="1.1" 
-                                   step="0.01"
-                                   onchange="updateFormulas()">
-                            <div class="formula-display" id="helloFormula2">
-                                결과 ÷ 1.1
-                            </div>
-                        </div>
-                        
-                        <div class="setting-item">
-                            <div class="setting-label">카피렌탈 나누기 값</div>
-                            <input type="number" 
-                                   id="copyDivisor" 
-                                   class="setting-input" 
-                                   value="1.1" 
-                                   step="0.01"
-                                   onchange="updateFormulas()">
-                            <div class="formula-display" id="copyFormula">
-                                수수료(VAT포함) ÷ 1.1
                             </div>
                         </div>
                     </div>
@@ -1002,45 +960,10 @@
                 
                 <div style="display: grid; gap: 20px;">
                     <div style="padding: 20px; background: var(--dark-card); border-radius: 10px; border: 1px solid rgba(25, 118, 210, 0.2);">
-                        <h3 style="color: var(--ajd-blue); margin-bottom: 15px;">📊 파일별 수수료 계산 방식</h3>
-                        <table style="width: 100%; border-collapse: collapse;">
-                            <thead>
-                                <tr style="border-bottom: 2px solid var(--ajd-blue);">
-                                    <th style="padding: 10px; text-align: left; color: var(--text-primary);">파일 유형</th>
-                                    <th style="padding: 10px; text-align: left; color: var(--text-primary);">계산 방식</th>
-                                    <th style="padding: 10px; text-align: left; color: var(--text-primary);">특이사항</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr style="border-bottom: 1px solid rgba(25, 118, 210, 0.1);">
-                                    <td style="padding: 10px; color: var(--ajd-blue-light);">헬로비전 (지엘/코맨)</td>
-                                    <td style="padding: 10px; color: var(--text-secondary);">렌탈료 × 36 × 0.22 ÷ 1.1</td>
-                                    <td style="padding: 10px; color: var(--text-dim);">정상렌탈료 기준</td>
-                                </tr>
-                                <tr style="border-bottom: 1px solid rgba(25, 118, 210, 0.1);">
-                                    <td style="padding: 10px; color: var(--text-secondary);">카피렌탈</td>
-                                    <td style="padding: 10px; color: var(--text-secondary);">VAT포함 수수료 ÷ 1.1</td>
-                                    <td style="padding: 10px; color: var(--text-dim);">36개월 기준</td>
-                                </tr>
-                                <tr style="border-bottom: 1px solid rgba(25, 118, 210, 0.1);">
-                                    <td style="padding: 10px; color: var(--text-secondary);">현대렌탈_유버스</td>
-                                    <td style="padding: 10px; color: var(--text-secondary);">수수료 ÷ 1.1</td>
-                                    <td style="padding: 10px; color: var(--text-dim);">기본 계산</td>
-                                </tr>
-                                <tr style="border-bottom: 1px solid rgba(25, 118, 210, 0.1);">
-                                    <td style="padding: 10px; color: var(--text-secondary);">일반 렌탈사</td>
-                                    <td style="padding: 10px; color: var(--text-secondary);">수수료 ÷ 1.1</td>
-                                    <td style="padding: 10px; color: var(--text-dim);">기본 계산</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    
-                    <div style="padding: 20px; background: var(--dark-card); border-radius: 10px; border: 1px solid rgba(25, 118, 210, 0.2);">
                         <h3 style="color: var(--ajd-blue); margin-bottom: 15px;">🚀 빠른 사용법</h3>
                         <ol style="color: var(--text-secondary); line-height: 2;">
                             <li><strong>파일 업로드:</strong> 업로드 탭에서 엑셀 파일을 드래그 앤 드롭</li>
-                            <li><strong>자동 처리:</strong> 파일 유형을 자동 인식하여 적절한 계산 방식 적용</li>
+                            <li><strong>자동 처리:</strong> 시트별로 자동 인식하여 적절한 계산 방식 적용</li>
                             <li><strong>검색:</strong> 모델명, 상품명, 렌탈사명으로 즉시 검색</li>
                             <li><strong>수수료 확인:</strong> 계산된 수수료가 카드에 표시됨</li>
                             <li><strong>설정 변경:</strong> 관리 탭에서 계산 값 수정 가능</li>
@@ -1048,31 +971,17 @@
                     </div>
                     
                     <div style="padding: 20px; background: rgba(25, 118, 210, 0.1); border-radius: 10px; border: 1px solid var(--ajd-blue);">
-                        <h3 style="color: var(--ajd-blue); margin-bottom: 15px;">⚠️ 헬로비전 파일 처리 안내</h3>
+                        <h3 style="color: var(--ajd-blue); margin-bottom: 15px;">📊 자동 파싱 기능</h3>
                         <p style="color: var(--text-secondary); line-height: 1.8;">
-                            <strong>헬로비전_지엘 & 헬로비전_코맨 파일:</strong><br>
-                            • 통합(일반,직영) 시트를 자동으로 처리합니다<br>
-                            • 정상렌탈료 컬럼을 자동으로 찾아 계산합니다<br>
-                            • 1,000개 이상의 상품도 문제없이 처리됩니다<br>
-                            • EQP ID, 모델코드, 모델명 등 모든 정보를 추출합니다<br><br>
+                            <strong>대형가전_RH & 대형가전_코맨 파일:</strong><br>
+                            • 모든 시트를 자동으로 처리합니다<br>
+                            • BS렌탈, 스마트렌탈, 캐리어 등 렌탈사별 구조 자동 인식<br>
+                            • 헤더 위치를 자동으로 찾아 데이터 추출<br>
+                            • 1,000개 이상의 상품도 안정적으로 처리<br><br>
                             
-                            <strong style="color: var(--ajd-blue-light);">팁:</strong> 헬로비전 파일은 복잡한 구조를 가지고 있지만, 
-                            시스템이 자동으로 헤더를 인식하고 데이터를 추출하므로 걱정하지 마세요!
+                            <strong style="color: var(--ajd-blue-light);">팁:</strong> 파일명이나 시트명에 렌탈사명이 포함되어 있으면 
+                            자동으로 인식하여 분류합니다!
                         </p>
-                    </div>
-                    
-                    <div style="padding: 20px; background: var(--dark-card); border-radius: 10px; border: 1px solid rgba(76, 175, 80, 0.3);">
-                        <h3 style="color: #4CAF50; margin-bottom: 15px;">✅ 지원 파일 체크리스트</h3>
-                        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
-                            <div style="color: var(--text-secondary);">✅ 대형가전_RH (모든 시트)</div>
-                            <div style="color: var(--text-secondary);">✅ 대형가전_코맨 (17개 시트)</div>
-                            <div style="color: var(--text-secondary);">✅ 카피렌탈 (복합기)</div>
-                            <div style="color: var(--text-secondary);">✅ 캐리어_코맨 (에어컨)</div>
-                            <div style="color: var(--ajd-blue-light);">✅ <strong>헬로비전_지엘 (특수계산)</strong></div>
-                            <div style="color: var(--ajd-blue-light);">✅ <strong>헬로비전_코맨 (특수계산)</strong></div>
-                            <div style="color: var(--text-secondary);">✅ 현대렌탈_유버스</div>
-                            <div style="color: var(--text-secondary);">✅ 기타 렌탈사 파일</div>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -1090,10 +999,7 @@
         
         // 수수료 계산 설정 (로컬 스토리지에서 불러오기)
         let commissionSettings = {
-            normalDivisor: 1.1,
-            helloMultiplier: 0.22,
-            helloDivisor: 1.1,
-            copyDivisor: 1.1
+            normalDivisor: 1.1
         };
 
         // 초기화
@@ -1108,9 +1014,6 @@
             if (saved) {
                 commissionSettings = JSON.parse(saved);
                 document.getElementById('normalDivisor').value = commissionSettings.normalDivisor;
-                document.getElementById('helloMultiplier').value = commissionSettings.helloMultiplier;
-                document.getElementById('helloDivisor').value = commissionSettings.helloDivisor;
-                document.getElementById('copyDivisor').value = commissionSettings.copyDivisor;
                 updateFormulas();
             }
         }
@@ -1118,10 +1021,7 @@
         // 수수료 설정 저장
         function saveCommissionSettings() {
             commissionSettings = {
-                normalDivisor: parseFloat(document.getElementById('normalDivisor').value),
-                helloMultiplier: parseFloat(document.getElementById('helloMultiplier').value),
-                helloDivisor: parseFloat(document.getElementById('helloDivisor').value),
-                copyDivisor: parseFloat(document.getElementById('copyDivisor').value)
+                normalDivisor: parseFloat(document.getElementById('normalDivisor').value)
             };
             
             localStorage.setItem('commissionSettings', JSON.stringify(commissionSettings));
@@ -1131,16 +1031,10 @@
         // 수수료 설정 초기화
         function resetCommissionSettings() {
             commissionSettings = {
-                normalDivisor: 1.1,
-                helloMultiplier: 0.22,
-                helloDivisor: 1.1,
-                copyDivisor: 1.1
+                normalDivisor: 1.1
             };
             
             document.getElementById('normalDivisor').value = 1.1;
-            document.getElementById('helloMultiplier').value = 0.22;
-            document.getElementById('helloDivisor').value = 1.1;
-            document.getElementById('copyDivisor').value = 1.1;
             
             updateFormulas();
             saveCommissionSettings();
@@ -1150,14 +1044,7 @@
         // 수식 표시 업데이트
         function updateFormulas() {
             const normalDivisor = document.getElementById('normalDivisor').value;
-            const helloMultiplier = document.getElementById('helloMultiplier').value;
-            const helloDivisor = document.getElementById('helloDivisor').value;
-            const copyDivisor = document.getElementById('copyDivisor').value;
-            
             document.getElementById('normalFormula').textContent = `수수료 ÷ ${normalDivisor}`;
-            document.getElementById('helloFormula1').textContent = `정상렌탈료 × 36개월 × ${helloMultiplier}`;
-            document.getElementById('helloFormula2').textContent = `결과 ÷ ${helloDivisor}`;
-            document.getElementById('copyFormula').textContent = `수수료(VAT포함) ÷ ${copyDivisor}`;
         }
 
         // 전체 수수료 재계산
@@ -1174,24 +1061,14 @@
             try {
                 // 모든 데이터 가져오기
                 const { data, error } = await supabase
-                    .from('rental_others')
+                    .from('rental_products')
                     .select('*');
                 
                 if (error) throw error;
                 
                 // 수수료 재계산
                 const updated = data.map(product => {
-                    let calculated_commission = 0;
-                    const isHelloVision = product.company.includes('헬로') || product.sheet_name.includes('헬로');
-                    const isCopyRental = product.company.includes('카피') || product.sheet_name.includes('카피');
-                    
-                    if (isHelloVision) {
-                        calculated_commission = (product.rental_fee * product.months * commissionSettings.helloMultiplier) / commissionSettings.helloDivisor;
-                    } else if (isCopyRental) {
-                        calculated_commission = product.original_commission / commissionSettings.copyDivisor;
-                    } else {
-                        calculated_commission = product.original_commission / commissionSettings.normalDivisor;
-                    }
+                    const calculated_commission = product.original_commission / commissionSettings.normalDivisor;
                     
                     return {
                         ...product,
@@ -1203,7 +1080,7 @@
                 for (let i = 0; i < updated.length; i += 100) {
                     const batch = updated.slice(i, i + 100);
                     await supabase
-                        .from('rental_others')
+                        .from('rental_products')
                         .upsert(batch);
                     
                     updateProgress(i, updated.length, `${i}/${updated.length} 처리 중...`);
@@ -1222,11 +1099,12 @@
         // Supabase 자동 연결
         async function connectSupabase() {
             try {
-                supabase = supabaseJs.createClient(SUPABASE_URL, SUPABASE_KEY);
+                const { createClient } = supabase;
+                supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
                 
                 // 연결 테스트
                 const { data, error } = await supabase
-                    .from('rental_others')
+                    .from('rental_products')
                     .select('count', { count: 'exact', head: true });
                 
                 if (error && error.code === 'PGRST116') {
@@ -1262,7 +1140,7 @@
         async function initDatabase() {
             console.log('테이블 생성 필요 - Supabase Dashboard에서 다음 SQL 실행:');
             console.log(`
-CREATE TABLE IF NOT EXISTS rental_others (
+CREATE TABLE IF NOT EXISTS rental_products (
     id SERIAL PRIMARY KEY,
     company VARCHAR(100),
     model VARCHAR(200),
@@ -1278,10 +1156,10 @@ CREATE TABLE IF NOT EXISTS rental_others (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_model ON rental_others(model);
-CREATE INDEX IF NOT EXISTS idx_product ON rental_others(product);
-CREATE INDEX IF NOT EXISTS idx_company ON rental_others(company);
-CREATE INDEX IF NOT EXISTS idx_sheet ON rental_others(sheet_name);
+CREATE INDEX IF NOT EXISTS idx_model ON rental_products(model);
+CREATE INDEX IF NOT EXISTS idx_product ON rental_products(product);
+CREATE INDEX IF NOT EXISTS idx_company ON rental_products(company);
+CREATE INDEX IF NOT EXISTS idx_sheet ON rental_products(sheet_name);
             `);
         }
 
@@ -1332,7 +1210,7 @@ CREATE INDEX IF NOT EXISTS idx_sheet ON rental_others(sheet_name);
             processFiles(files);
         }
 
-        // 파일 처리 (개선된 버전)
+        // 파일 처리
         async function processFiles(files) {
             if (!supabase) {
                 showStatus('uploadStatus', 'Supabase 연결을 확인해주세요.', 'error');
@@ -1348,13 +1226,6 @@ CREATE INDEX IF NOT EXISTS idx_sheet ON rental_others(sheet_name);
             
             for (const file of files) {
                 try {
-                    // 파일 타입 확인
-                    let fileType = '일반';
-                    if (file.name.includes('헬로비전')) fileType = '헬로비전';
-                    else if (file.name.includes('카피렌탈')) fileType = '카피렌탈';
-                    else if (file.name.includes('캐리어')) fileType = '캐리어';
-                    else if (file.name.includes('현대렌탈') || file.name.includes('유버스')) fileType = '현대렌탈';
-                    
                     updateProgress(0, 100, `${file.name} 분석 중...`);
                     
                     const products = await parseExcelFile(file);
@@ -1375,7 +1246,6 @@ CREATE INDEX IF NOT EXISTS idx_sheet ON rental_others(sheet_name);
                     
                     fileResults.push({
                         name: file.name,
-                        type: fileType,
                         products: fileProductCount,
                         status: 'success'
                     });
@@ -1384,7 +1254,6 @@ CREATE INDEX IF NOT EXISTS idx_sheet ON rental_others(sheet_name);
                     console.error(`파일 처리 실패 (${file.name}):`, error);
                     fileResults.push({
                         name: file.name,
-                        type: '알 수 없음',
                         products: 0,
                         status: 'error'
                     });
@@ -1398,8 +1267,7 @@ CREATE INDEX IF NOT EXISTS idx_sheet ON rental_others(sheet_name);
             resultMessage += `<div style="font-size: 0.9em;">`;
             fileResults.forEach(result => {
                 const icon = result.status === 'success' ? '✅' : '❌';
-                const typeColor = result.type === '헬로비전' ? 'var(--ajd-blue-light)' : 'var(--text-secondary)';
-                resultMessage += `${icon} <span style="color: ${typeColor}">[${result.type}]</span> ${result.name}: ${result.products}개 상품<br>`;
+                resultMessage += `${icon} ${result.name}: ${result.products}개 상품<br>`;
             });
             resultMessage += `</div><br>`;
             resultMessage += `<strong>총 ${processedSheets}개 시트에서 ${totalProducts}개 상품 저장됨</strong>`;
@@ -1426,49 +1294,12 @@ CREATE INDEX IF NOT EXISTS idx_sheet ON rental_others(sheet_name);
                             const sheet = workbook.Sheets[sheetName];
                             const jsonData = XLSX.utils.sheet_to_json(sheet, {header: 1});
                             
-                            // 파일명에 따른 특별 처리
-                            if (file.name.includes('카피렌탈')) {
-                                const products = parseCopyRental(jsonData, sheetName, file.name);
-                                if (products.length > 0) {
-                                    allSheetProducts.push({
-                                        sheetName: '카피렌탈',
-                                        products: products
-                                    });
-                                }
-                            } else if (file.name.includes('캐리어')) {
-                                const products = parseCarrier(jsonData, sheetName, file.name);
-                                if (products.length > 0) {
-                                    allSheetProducts.push({
-                                        sheetName: '캐리어',
-                                        products: products
-                                    });
-                                }
-                            } else if (file.name.includes('헬로비전') || file.name.includes('헬로')) {
-                                // 헬로비전 전용 파싱
-                                const products = parseHelloVision(jsonData, sheetName, file.name);
-                                if (products.length > 0) {
-                                    allSheetProducts.push({
-                                        sheetName: '헬로비전',
-                                        products: products
-                                    });
-                                }
-                            } else if (file.name.includes('현대렌탈') || file.name.includes('유버스')) {
-                                // 현대렌탈 전용 파싱
-                                const products = parseHyundaiRental(jsonData, sheetName, file.name);
-                                if (products.length > 0) {
-                                    allSheetProducts.push({
-                                        sheetName: '현대렌탈',
-                                        products: products
-                                    });
-                                }
-                            } else {
-                                const products = parseSheetData(jsonData, sheetName, file.name);
-                                if (products.length > 0) {
-                                    allSheetProducts.push({
-                                        sheetName: sheetName,
-                                        products: products
-                                    });
-                                }
+                            const products = parseSheetData(jsonData, sheetName, file.name);
+                            if (products.length > 0) {
+                                allSheetProducts.push({
+                                    sheetName: sheetName,
+                                    products: products
+                                });
                             }
                         }
                         
@@ -1482,307 +1313,21 @@ CREATE INDEX IF NOT EXISTS idx_sheet ON rental_others(sheet_name);
             });
         }
 
-        // 캐리어 전용 파싱
-        function parseCarrier(data, sheetName, fileName) {
+        // 시트 데이터 파싱 (범용)
+        function parseSheetData(data, sheetName, fileName) {
             const products = [];
             
-            // 캐리어는 3행부터 데이터 시작
-            for (let i = 3; i < data.length; i++) {
-                const row = data[i];
-                if (!row || row.length < 10) continue;
-                
-                const category = String(row[0] || '').trim();
-                const modelType = String(row[1] || '').trim();
-                const grade = String(row[2] || '').trim();
-                const area = String(row[3] || '').trim();
-                const modelName = String(row[4] || '').trim();
-                const care = String(row[5] || '').trim();
-                const months = parseNumber(row[6]) || 36;
-                const monthlyFee = parseNumber(row[7]);
-                const commission = parseNumber(row[9]);
-                
-                if (modelName && monthlyFee > 0) {
-                    products.push({
-                        company: '캐리어',
-                        model: modelName,
-                        product: `${modelType} ${grade} ${area}`.trim() || modelName,
-                        as_info: care,
-                        rental_fee: monthlyFee,
-                        months: months,
-                        original_commission: commission,
-                        calculated_commission: commission / commissionSettings.normalDivisor,
-                        sheet_name: '캐리어',
-                        file_name: fileName
-                    });
-                }
-            }
+            // 렌탈사명 추출 (시트명 또는 파일명에서)
+            let companyName = sheetName;
+            const companies = ['BS렌탈', '스마트렌탈', '캐리어', '세라젬', '넥스', '렌탈페이', '이니렌탈', 
+                              '코오롱렌탈', '경동나비엔', 'LG헬로비전', 'SK매직', '웅진코웨이'];
             
-            return products;
-        }
-
-        // 현대렌탈 전용 파싱
-        function parseHyundaiRental(data, sheetName, fileName) {
-            const products = [];
-            
-            // 현대렌탈은 다양한 상품 구조를 가질 수 있음
-            // 헤더 찾기
-            let headerRow = -1;
-            const headerKeywords = ['모델', '상품', '제품', '렌탈', '수수료', '월료'];
-            
-            for (let i = 0; i < Math.min(20, data.length); i++) {
-                if (data[i] && data[i].length > 0) {
-                    const row = data[i].map(cell => String(cell || '').toLowerCase());
-                    const matchCount = headerKeywords.filter(keyword => 
-                        row.some(cell => cell.includes(keyword))
-                    ).length;
-                    
-                    if (matchCount >= 2) {
-                        headerRow = i;
-                        break;
-                    }
-                }
-            }
-            
-            if (headerRow === -1) {
-                // 기본값으로 0행을 헤더로 가정
-                headerRow = 0;
-            }
-            
-            // 헤더에서 컬럼 인덱스 찾기
-            const headers = data[headerRow].map(h => String(h || '').toLowerCase());
-            const columnIndexes = {
-                model: findColumnIndex(headers, ['모델명', '모델코드', '모델', 'model', '제품코드']),
-                product: findColumnIndex(headers, ['상품명', '상품', '제품명', '제품', '품명', '품목']),
-                category: findColumnIndex(headers, ['구분', '분류', '카테고리', '품목']),
-                rental: findColumnIndex(headers, ['렌탈료', '월렌탈', '렌탈', '월료', '월납입료', '정상렌탈']),
-                commission: findColumnIndex(headers, ['수수료', '영업수수료', '판매수수료', '커미션', 'fee']),
-                months: findColumnIndex(headers, ['개월', '계약기간', '기간', '약정', '계약'])
-            };
-            
-            // 렌탈료가 없으면 숫자 패턴으로 찾기
-            if (columnIndexes.rental === -1) {
-                if (data[headerRow + 1]) {
-                    for (let i = 3; i < data[headerRow + 1].length; i++) {
-                        const val = parseNumber(data[headerRow + 1][i]);
-                        if (val >= 10000 && val <= 500000) {
-                            columnIndexes.rental = i;
-                            break;
-                        }
-                    }
-                }
-            }
-            
-            // 데이터 추출
-            for (let i = headerRow + 1; i < data.length; i++) {
-                const row = data[i];
-                if (!row || row.length === 0) continue;
-                
-                // 빈 행 체크
-                const hasData = row.some(cell => cell && String(cell).trim() !== '');
-                if (!hasData) continue;
-                
-                const model = getValueFromRow(row, columnIndexes.model);
-                const product = getValueFromRow(row, columnIndexes.product);
-                const category = getValueFromRow(row, columnIndexes.category);
-                const rental_fee = parseNumber(getValueFromRow(row, columnIndexes.rental));
-                const original_commission = parseNumber(getValueFromRow(row, columnIndexes.commission));
-                const months = parseNumber(getValueFromRow(row, columnIndexes.months)) || 36;
-                
-                // 렌탈료가 없으면 다른 컬럼에서 찾기
-                let finalRentalFee = rental_fee;
-                if (finalRentalFee === 0) {
-                    for (let j = 3; j < row.length; j++) {
-                        const val = parseNumber(row[j]);
-                        if (val >= 10000 && val <= 500000) {
-                            finalRentalFee = val;
-                            break;
-                        }
-                    }
-                }
-                
-                if ((model || product) && finalRentalFee > 0) {
-                    products.push({
-                        company: '현대렌탈',
-                        model: model || product,
-                        product: product || model || category,
-                        as_info: category || '',
-                        rental_fee: finalRentalFee,
-                        months: months,
-                        original_commission: original_commission,
-                        calculated_commission: original_commission / commissionSettings.normalDivisor,
-                        sheet_name: '현대렌탈',
-                        file_name: fileName
-                    });
-                }
-            }
-            
-            // 데이터가 없으면 일반 파싱 시도
-            if (products.length === 0) {
-                return parseSheetData(data, sheetName, fileName);
-            }
-            
-            return products;
-        }
-
-        // 헬로비전 전용 파싱
-        function parseHelloVision(data, sheetName, fileName) {
-            const products = [];
-            
-            // 헬로비전은 복잡한 구조를 가지고 있음
-            // 헬로비전_지엘과 헬로비전_코맨 모두 지원
-            const isGiel = fileName.includes('지엘');
-            const isKoman = fileName.includes('코맨') || fileName.includes('코멘');
-            
-            // 헤더를 찾기 위한 키워드
-            const headerKeywords = ['모델', '품목', '브랜드', '정상', '렌탈'];
-            
-            // 헤더 행 찾기 - 보통 1행 또는 2행
-            let headerRow = -1;
-            for (let i = 0; i < Math.min(10, data.length); i++) {
-                if (data[i] && data[i].length > 0) {
-                    const row = data[i].map(cell => String(cell || '').toLowerCase());
-                    const matchCount = headerKeywords.filter(keyword => 
-                        row.some(cell => cell.includes(keyword))
-                    ).length;
-                    
-                    if (matchCount >= 2) {
-                        headerRow = i;
-                        break;
-                    }
-                }
-            }
-            
-            if (headerRow === -1) {
-                // 기본값으로 2행을 헤더로 가정 (헬로비전 특성)
-                headerRow = 2;
-            }
-            
-            // 헤더에서 컬럼 인덱스 찾기
-            const headers = data[headerRow].map(h => String(h || '').toLowerCase());
-            const columnIndexes = {
-                model: findColumnIndex(headers, ['모델코드', '모델', 'model']),
-                product: findColumnIndex(headers, ['모델명', '상품명', '품명']),
-                brand: findColumnIndex(headers, ['브랜드', 'brand']),
-                category: findColumnIndex(headers, ['품목종류', '품목', '구분']),
-                rental: -1, // 정상렌탈료는 별도로 찾기
-                spec: findColumnIndex(headers, ['규격', '사양', 'spec'])
-            };
-            
-            // 정상렌탈료 컬럼 찾기 (보통 뒤쪽에 있음)
-            for (let i = 0; i < headers.length; i++) {
-                if (headers[i].includes('정상') || headers[i].includes('렌탈료')) {
-                    columnIndexes.rental = i;
+            for (const company of companies) {
+                if (sheetName.includes(company) || fileName.includes(company)) {
+                    companyName = company;
                     break;
                 }
             }
-            
-            // 정상렌탈료를 못 찾으면 숫자 패턴으로 추정
-            if (columnIndexes.rental === -1) {
-                // 첫 데이터 행에서 10000 이상의 숫자 찾기
-                if (data[headerRow + 1]) {
-                    for (let i = 15; i < data[headerRow + 1].length; i++) {
-                        const val = parseNumber(data[headerRow + 1][i]);
-                        if (val >= 10000 && val <= 200000) {
-                            columnIndexes.rental = i;
-                            break;
-                        }
-                    }
-                }
-            }
-            
-            // 데이터 추출
-            for (let i = headerRow + 1; i < data.length; i++) {
-                const row = data[i];
-                if (!row || row.length === 0) continue;
-                
-                const modelCode = getValueFromRow(row, columnIndexes.model);
-                const modelName = getValueFromRow(row, columnIndexes.product);
-                const brand = getValueFromRow(row, columnIndexes.brand);
-                const category = getValueFromRow(row, columnIndexes.category);
-                const spec = getValueFromRow(row, columnIndexes.spec);
-                
-                // 렌탈료 찾기 - 여러 컬럼 시도
-                let rentalFee = 0;
-                if (columnIndexes.rental >= 0) {
-                    rentalFee = parseNumber(row[columnIndexes.rental]);
-                }
-                
-                // 렌탈료가 없으면 다른 숫자 컬럼 찾기
-                if (rentalFee === 0) {
-                    for (let j = 15; j < row.length; j++) {
-                        const val = parseNumber(row[j]);
-                        if (val >= 10000 && val <= 200000) {
-                            rentalFee = val;
-                            break;
-                        }
-                    }
-                }
-                
-                if ((modelCode || modelName) && rentalFee > 0) {
-                    // 헬로비전 수수료 계산: 렌탈료 × 36 × 0.22 ÷ 1.1
-                    const months = 36; // 헬로비전은 기본 36개월
-                    const calculated_commission = (rentalFee * months * commissionSettings.helloMultiplier) / commissionSettings.helloDivisor;
-                    
-                    products.push({
-                        company: '헬로비전',
-                        model: modelCode || modelName,
-                        product: modelName || `${brand} ${category}`.trim(),
-                        as_info: spec || '',
-                        rental_fee: rentalFee,
-                        months: months,
-                        original_commission: 0, // 헬로비전은 원본 수수료 없음
-                        calculated_commission: calculated_commission,
-                        sheet_name: '헬로비전',
-                        file_name: fileName
-                    });
-                }
-            }
-            
-            // 데이터가 없으면 일반 파싱 시도
-            if (products.length === 0) {
-                return parseSheetData(data, sheetName, fileName);
-            }
-            
-            return products;
-        }
-
-        // 카피렌탈 전용 파싱
-        function parseCopyRental(data, sheetName, fileName) {
-            const products = [];
-            
-            // 카피렌탈은 2행부터 데이터 시작
-            for (let i = 2; i < data.length; i++) {
-                const row = data[i];
-                if (!row || row.length < 7) continue;
-                
-                const category = String(row[0] || '').replace(/\r?\n/g, ' ').trim();
-                const productName = String(row[1] || '').trim();
-                const monthlyFee = parseNumber(row[2]);
-                const commission36VAT = parseNumber(row[6]); // 36개월 VAT포함 수수료
-                
-                if (productName && monthlyFee > 0) {
-                    products.push({
-                        company: '카피렌탈',
-                        model: productName,
-                        product: productName,
-                        as_info: category,
-                        rental_fee: monthlyFee,
-                        months: 36,
-                        original_commission: commission36VAT,
-                        calculated_commission: commission36VAT / commissionSettings.copyDivisor,
-                        sheet_name: '카피렌탈',
-                        file_name: fileName
-                    });
-                }
-            }
-            
-            return products;
-        }
-
-        // 시트 데이터 파싱 (개선된 버전)
-        function parseSheetData(data, sheetName, fileName) {
-            const products = [];
-            const isHelloVision = sheetName.includes('헬로') || fileName.includes('헬로비전');
             
             // 빈 행이 아닌 첫 번째 행부터 시작
             let startRow = 0;
@@ -1796,9 +1341,9 @@ CREATE INDEX IF NOT EXISTS idx_sheet ON rental_others(sheet_name);
                 }
             }
             
-            // 헤더 찾기 (더 유연한 방식)
+            // 헤더 찾기
             let headerRow = -1;
-            const headerKeywords = ['모델', '상품', '품목', '제품', '렌탈', '수수료', '월료'];
+            const headerKeywords = ['모델', '상품', '품목', '제품', '렌탈', '수수료', '월료', '품명'];
             
             for (let i = startRow; i < Math.min(data.length, 20); i++) {
                 if (data[i] && data[i].length > 0) {
@@ -1831,7 +1376,7 @@ CREATE INDEX IF NOT EXISTS idx_sheet ON rental_others(sheet_name);
                 const hasData = row.some(cell => cell && String(cell).trim() !== '');
                 if (!hasData) continue;
                 
-                const product = extractProductData(row, columnIndexes, sheetName, fileName, isHelloVision);
+                const product = extractProductData(row, columnIndexes, companyName, sheetName, fileName);
                 
                 if (product && (product.model || product.product) && product.rental_fee > 0) {
                     products.push(product);
@@ -1844,11 +1389,11 @@ CREATE INDEX IF NOT EXISTS idx_sheet ON rental_others(sheet_name);
         // 컬럼 인덱스 찾기
         function findColumnIndexes(headers) {
             return {
-                model: findColumnIndex(headers, ['모델명', '모델코드', '모델', 'model']),
-                product: findColumnIndex(headers, ['상품명', '상품', '제품명', '제품', '품목', '품명']),
+                model: findColumnIndex(headers, ['모델명', '모델코드', '모델', 'model', '형번']),
+                product: findColumnIndex(headers, ['상품명', '상품', '제품명', '제품', '품목', '품명', '모델명']),
                 as: findColumnIndex(headers, ['a/s', 'as', '서비스', '케어', '무상', '보증']),
-                rental: findColumnIndex(headers, ['렌탈료', '월렌탈', '렌탈', '월료', '월납입료', '36개월']),
-                commission: findColumnIndex(headers, ['수수료', '영업수수료', '판매수수료', '커미션', 'vat포']),
+                rental: findColumnIndex(headers, ['렌탈료', '월렌탈', '렌탈', '월료', '월납입료', '36개월', '월']),
+                commission: findColumnIndex(headers, ['수수료', '영업수수료', '판매수수료', '커미션', 'fee']),
                 months: findColumnIndex(headers, ['개월', '계약기간', '기간', '약정'])
             };
         }
@@ -1863,7 +1408,7 @@ CREATE INDEX IF NOT EXISTS idx_sheet ON rental_others(sheet_name);
         }
 
         // 상품 데이터 추출
-        function extractProductData(row, columnIndexes, sheetName, fileName, isHelloVision) {
+        function extractProductData(row, columnIndexes, companyName, sheetName, fileName) {
             const model = getValueFromRow(row, columnIndexes.model);
             const product = getValueFromRow(row, columnIndexes.product);
             const as_info = getValueFromRow(row, columnIndexes.as);
@@ -1871,17 +1416,11 @@ CREATE INDEX IF NOT EXISTS idx_sheet ON rental_others(sheet_name);
             const original_commission = parseNumber(getValueFromRow(row, columnIndexes.commission));
             const months = parseNumber(getValueFromRow(row, columnIndexes.months)) || 36;
             
-            let calculated_commission = 0;
-            
             // 수수료 계산
-            if (isHelloVision) {
-                calculated_commission = (rental_fee * months * commissionSettings.helloMultiplier) / commissionSettings.helloDivisor;
-            } else {
-                calculated_commission = original_commission / commissionSettings.normalDivisor;
-            }
+            const calculated_commission = original_commission / commissionSettings.normalDivisor;
             
             return {
-                company: sheetName,
+                company: companyName,
                 model: model,
                 product: product || model,
                 as_info: as_info,
@@ -1916,7 +1455,7 @@ CREATE INDEX IF NOT EXISTS idx_sheet ON rental_others(sheet_name);
                 // 같은 sheet_name의 기존 데이터 삭제
                 const sheetName = products[0].sheet_name;
                 await supabase
-                    .from('rental_others')
+                    .from('rental_products')
                     .delete()
                     .eq('sheet_name', sheetName);
                 
@@ -1925,7 +1464,7 @@ CREATE INDEX IF NOT EXISTS idx_sheet ON rental_others(sheet_name);
                 for (let i = 0; i < products.length; i += batchSize) {
                     const batch = products.slice(i, i + batchSize);
                     const { error } = await supabase
-                        .from('rental_others')
+                        .from('rental_products')
                         .insert(batch);
                     
                     if (error) throw error;
@@ -1955,7 +1494,7 @@ CREATE INDEX IF NOT EXISTS idx_sheet ON rental_others(sheet_name);
             const searchTerm = document.getElementById('searchInput').value.trim();
             
             try {
-                let query = supabase.from('rental_others').select('*');
+                let query = supabase.from('rental_products').select('*');
                 
                 if (searchTerm) {
                     query = query.or(`model.ilike.%${searchTerm}%,product.ilike.%${searchTerm}%,company.ilike.%${searchTerm}%`);
@@ -2048,12 +1587,12 @@ CREATE INDEX IF NOT EXISTS idx_sheet ON rental_others(sheet_name);
             try {
                 // 전체 상품 수
                 const { count: totalCount } = await supabase
-                    .from('rental_others')
+                    .from('rental_products')
                     .select('*', { count: 'exact', head: true });
                 
                 // 회사 수
                 const { data: companies } = await supabase
-                    .from('rental_others')
+                    .from('rental_products')
                     .select('company')
                     .limit(5000);
                 
@@ -2061,7 +1600,7 @@ CREATE INDEX IF NOT EXISTS idx_sheet ON rental_others(sheet_name);
                 
                 // 마지막 업데이트
                 const { data: lastUpdate } = await supabase
-                    .from('rental_others')
+                    .from('rental_products')
                     .select('created_at')
                     .order('created_at', { ascending: false })
                     .limit(1);
@@ -2095,7 +1634,7 @@ CREATE INDEX IF NOT EXISTS idx_sheet ON rental_others(sheet_name);
             
             try {
                 const { error } = await supabase
-                    .from('rental_others')
+                    .from('rental_products')
                     .delete()
                     .neq('id', 0);
                 
@@ -2122,7 +1661,7 @@ CREATE INDEX IF NOT EXISTS idx_sheet ON rental_others(sheet_name);
             
             try {
                 const { data, error } = await supabase
-                    .from('rental_others')
+                    .from('rental_products')
                     .select('*')
                     .order('company');
                 
