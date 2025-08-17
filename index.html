@@ -1436,7 +1436,7 @@
             }
             
             // 컬럼 인덱스 찾기
-            const columnIndexes = findColumnIndexesImproved(headers);
+            const columnIndexes = findColumnIndexes(headers);
             console.log(`  - 컬럼 매핑: 모델[${columnIndexes.model}], 상품[${columnIndexes.product}], 렌탈료[${columnIndexes.rental}], 수수료[${columnIndexes.commission}]`);
             
             // 데이터 추출 - 헤더 다음 행부터 끝까지
@@ -1458,7 +1458,7 @@
                 }
                 
                 // 상품 데이터 추출
-                const product = extractProductDataImproved(row, columnIndexes, companyName, sheetName, fileName);
+                const product = extractProductData(row, columnIndexes, companyName, sheetName, fileName);
                 
                 // 유효성 검증 - 최소한 모델이나 상품명이 있고, 렌탈료가 있어야 함
                 if (product && (product.model || product.product)) {
