@@ -875,11 +875,17 @@
                         <h4 style="color: var(--ajd-blue); margin-bottom: 10px;">💡 파일 처리 방식</h4>
                         <p style="color: var(--text-secondary); font-size: 0.9em; line-height: 1.6;">
                             • 각 시트별로 자동 분석 및 렌탈사 인식<br>
-                            • 헤더 위치 자동 탐색 (1~10행 내)<br>
+                            • 헤더 위치 자동 탐색 (1~30행 내)<br>
                             • 모델명, 상품명, 렌탈료, 수수료 자동 추출<br>
                             • 계산된 수수료 = 원본수수료 ÷ 1.1<br>
                             • 중복 데이터 자동 업데이트
                         </p>
+                        <div style="margin-top: 15px; padding: 10px; background: rgba(244, 67, 54, 0.1); border-radius: 5px; border: 1px solid rgba(244, 67, 54, 0.3);">
+                            <p style="color: #F44336; font-size: 0.85em; margin: 0;">
+                                <strong>⚠️ 파일이 인식되지 않는 경우:</strong><br>
+                                브라우저 콘솔(F12)에서 상세 로그를 확인하세요.
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1201,6 +1207,7 @@
                 return;
             }
             
+            console.log('=== 파일 업로드 시작 ===');
             showLoadingOverlay(true, '파일 분석 중...');
             
             let totalProducts = 0;
@@ -1210,6 +1217,7 @@
             
             for (const file of files) {
                 try {
+                    console.log(`\n파일 처리: ${file.name}`);
                     updateProgress(0, 100, `${file.name} 분석 중...`);
                     
                     const products = await parseExcelFile(file);
@@ -1231,7 +1239,7 @@
                     fileResults.push({
                         name: file.name,
                         products: fileProductCount,
-                        status: 'success'
+                        status: fileProductCount > 0 ? 'success' : 'warning'
                     });
                     
                 } catch (error) {
@@ -1247,16 +1255,23 @@
             showLoadingOverlay(false);
             
             // 결과 상세 표시
-            let resultMessage = `<strong>✅ 업로드 완료!</strong><br><br>`;
+            let resultMessage = '';
+            if (totalProducts > 0) {
+                resultMessage = `<strong>✅ 업로드 완료!</strong><br><br>`;
+            } else {
+                resultMessage = `<strong>⚠️ 데이터를 찾을 수 없습니다</strong><br>`;
+                resultMessage += `<small>브라우저 콘솔(F12)에서 상세 로그를 확인하세요</small><br><br>`;
+            }
+            
             resultMessage += `<div style="font-size: 0.9em;">`;
             fileResults.forEach(result => {
-                const icon = result.status === 'success' ? '✅' : '❌';
+                const icon = result.status === 'success' ? '✅' : result.status === 'warning' ? '⚠️' : '❌';
                 resultMessage += `${icon} ${result.name}: ${result.products}개 상품<br>`;
             });
             resultMessage += `</div><br>`;
             resultMessage += `<strong>총 ${processedSheets}개 시트에서 ${totalProducts}개 상품 저장됨</strong>`;
             
-            showStatus('uploadStatus', resultMessage, 'success');
+            showStatus('uploadStatus', resultMessage, totalProducts > 0 ? 'success' : 'error');
             
             await loadStats();
         }
@@ -1271,14 +1286,21 @@
                         const data = new Uint8Array(e.target.result);
                         const workbook = XLSX.read(data, {type: 'array'});
                         
+                        console.log(`파일 분석: ${file.name}`);
+                        console.log(`시트 목록: ${workbook.SheetNames.join(', ')}`);
+                        
                         const allSheetProducts = [];
                         
                         // 모든 시트 처리
                         for (const sheetName of workbook.SheetNames) {
+                            console.log(`\n시트 처리 중: ${sheetName}`);
                             const sheet = workbook.Sheets[sheetName];
                             const jsonData = XLSX.utils.sheet_to_json(sheet, {header: 1});
+                            console.log(`  데이터 행 수: ${jsonData.length}`);
                             
                             const products = parseSheetData(jsonData, sheetName, file.name);
+                            console.log(`  추출된 상품 수: ${products.length}`);
+                            
                             if (products.length > 0) {
                                 allSheetProducts.push({
                                     sheetName: sheetName,
@@ -1289,6 +1311,7 @@
                         
                         resolve(allSheetProducts);
                     } catch (error) {
+                        console.error('파일 파싱 오류:', error);
                         reject(error);
                     }
                 };
@@ -1300,6 +1323,14 @@
         // 시트 데이터 파싱 (범용)
         function parseSheetData(data, sheetName, fileName) {
             const products = [];
+            
+            console.log(`  파싱 시작: ${sheetName}`);
+            
+            // 빈 데이터 체크
+            if (!data || data.length === 0) {
+                console.log('  빈 시트입니다.');
+                return products;
+            }
             
             // 렌탈사명 추출 (시트명 또는 파일명에서)
             let companyName = sheetName;
@@ -1313,46 +1344,44 @@
                 }
             }
             
-            // 빈 행이 아닌 첫 번째 행부터 시작
-            let startRow = 0;
-            for (let i = 0; i < Math.min(data.length, 20); i++) {
-                if (data[i] && data[i].length > 0) {
-                    const hasData = data[i].some(cell => cell && String(cell).trim() !== '');
-                    if (hasData) {
-                        startRow = i;
-                        break;
-                    }
-                }
-            }
-            
-            // 헤더 찾기
+            // 헤더 찾기 - 더 유연한 방식
             let headerRow = -1;
-            const headerKeywords = ['모델', '상품', '품목', '제품', '렌탈', '수수료', '월료', '품명'];
+            const headerKeywords = ['모델', '상품', '품목', '제품', '렌탈', '수수료', '월료', '품명', '월납', '금액'];
             
-            for (let i = startRow; i < Math.min(data.length, 20); i++) {
-                if (data[i] && data[i].length > 0) {
+            for (let i = 0; i < Math.min(data.length, 30); i++) {
+                if (data[i] && data[i].length > 3) {
                     const row = data[i].map(cell => String(cell || '').toLowerCase());
+                    const rowText = row.join(' ');
+                    
+                    // 키워드 매칭 수 계산
                     const matchCount = headerKeywords.filter(keyword => 
-                        row.some(cell => cell.includes(keyword))
+                        rowText.includes(keyword)
                     ).length;
                     
-                    if (matchCount >= 2) {
+                    // 2개 이상 매칭되거나, '모델'이나 '상품' 키워드가 있으면 헤더로 인식
+                    if (matchCount >= 2 || rowText.includes('모델') || rowText.includes('상품')) {
                         headerRow = i;
+                        console.log(`  헤더 발견: 행 ${i}`);
+                        console.log(`  헤더 내용: ${row.slice(0, 10).join(' | ')}`);
                         break;
                     }
                 }
             }
             
             if (headerRow === -1) {
-                console.log(`헤더를 찾을 수 없음: ${sheetName}`);
-                return products;
+                console.log(`  헤더를 찾을 수 없음. 기본 구조로 시도...`);
+                // 헤더가 없으면 기본 구조로 가정
+                headerRow = 0;
             }
             
             // 컬럼 인덱스 찾기
-            const headers = data[headerRow].map(h => String(h || '').toLowerCase());
+            const headers = data[headerRow] ? data[headerRow].map(h => String(h || '').toLowerCase()) : [];
             const columnIndexes = findColumnIndexes(headers);
             
+            console.log(`  컬럼 인덱스: 모델=${columnIndexes.model}, 상품=${columnIndexes.product}, 렌탈료=${columnIndexes.rental}, 수수료=${columnIndexes.commission}`);
+            
             // 데이터 추출
+            let extractedCount = 0;
             for (let i = headerRow + 1; i < data.length; i++) {
                 const row = data[i];
                 if (!row || row.length === 0) continue;
@@ -1362,24 +1391,55 @@
                 
                 const product = extractProductData(row, columnIndexes, companyName, sheetName, fileName);
                 
-                if (product && (product.model || product.product) && product.rental_fee > 0) {
+                // 최소한 모델이나 상품명이 있고, 렌탈료가 1000원 이상이면 유효한 데이터로 인식
+                if (product && (product.model || product.product) && product.rental_fee >= 1000) {
                     products.push(product);
+                    extractedCount++;
+                    
+                    // 처음 몇 개 샘플 로그
+                    if (extractedCount <= 3) {
+                        console.log(`    샘플 ${extractedCount}: ${product.model || product.product} - 렌탈료: ${product.rental_fee}원`);
+                    }
                 }
             }
             
+            console.log(`  총 ${products.length}개 상품 추출 완료`);
             return products;
         }
 
         // 컬럼 인덱스 찾기
         function findColumnIndexes(headers) {
-            return {
-                model: findColumnIndex(headers, ['모델명', '모델코드', '모델', 'model', '형번']),
-                product: findColumnIndex(headers, ['상품명', '상품', '제품명', '제품', '품목', '품명', '모델명']),
-                as: findColumnIndex(headers, ['a/s', 'as', '서비스', '케어', '무상', '보증']),
-                rental: findColumnIndex(headers, ['렌탈료', '월렌탈', '렌탈', '월료', '월납입료', '36개월', '월']),
-                commission: findColumnIndex(headers, ['수수료', '영업수수료', '판매수수료', '커미션', 'fee']),
-                months: findColumnIndex(headers, ['개월', '계약기간', '기간', '약정'])
+            const indexes = {
+                model: findColumnIndex(headers, ['모델명', '모델코드', '모델', 'model', '형번', '품번']),
+                product: findColumnIndex(headers, ['상품명', '상품', '제품명', '제품', '품목', '품명', '모델명', '상품설명']),
+                as: findColumnIndex(headers, ['a/s', 'as', '서비스', '케어', '무상', '보증', '무상a/s', '무상as']),
+                rental: findColumnIndex(headers, ['렌탈료', '월렌탈', '렌탈', '월료', '월납입료', '36개월', '월', '월납', '렌탈금액', '렌털료']),
+                commission: findColumnIndex(headers, ['수수료', '영업수수료', '판매수수료', '커미션', 'fee', '수수료(vat포함)', 'vat포함']),
+                months: findColumnIndex(headers, ['개월', '계약기간', '기간', '약정', '계약개월'])
             };
+            
+            // 모델과 상품이 모두 없으면, 첫 번째 텍스트 컬럼을 모델로 가정
+            if (indexes.model === -1 && indexes.product === -1) {
+                for (let i = 0; i < headers.length; i++) {
+                    if (headers[i] && headers[i].length > 0) {
+                        indexes.model = i;
+                        break;
+                    }
+                }
+            }
+            
+            // 렌탈료가 없으면 '월' 또는 숫자가 포함된 컬럼 찾기
+            if (indexes.rental === -1) {
+                for (let i = 0; i < headers.length; i++) {
+                    const header = headers[i];
+                    if (header && (header.includes('월') || header.includes('36') || header.includes('금액'))) {
+                        indexes.rental = i;
+                        break;
+                    }
+                }
+            }
+            
+            return indexes;
         }
 
         // 특정 컬럼 찾기
@@ -1396,18 +1456,40 @@
             const model = getValueFromRow(row, columnIndexes.model);
             const product = getValueFromRow(row, columnIndexes.product);
             const as_info = getValueFromRow(row, columnIndexes.as);
-            const rental_fee = parseNumber(getValueFromRow(row, columnIndexes.rental));
-            const original_commission = parseNumber(getValueFromRow(row, columnIndexes.commission));
+            let rental_fee = parseNumber(getValueFromRow(row, columnIndexes.rental));
+            let original_commission = parseNumber(getValueFromRow(row, columnIndexes.commission));
             const months = parseNumber(getValueFromRow(row, columnIndexes.months)) || 36;
+            
+            // 렌탈료가 없으면 다른 컬럼에서 10000~500000 범위의 숫자 찾기
+            if (rental_fee === 0) {
+                for (let i = 3; i < row.length; i++) {
+                    const val = parseNumber(row[i]);
+                    if (val >= 10000 && val <= 500000) {
+                        rental_fee = val;
+                        break;
+                    }
+                }
+            }
+            
+            // 수수료가 없으면 다른 컬럼에서 50000 이상의 숫자 찾기
+            if (original_commission === 0) {
+                for (let i = 5; i < row.length; i++) {
+                    const val = parseNumber(row[i]);
+                    if (val >= 50000 && val <= 10000000) {
+                        original_commission = val;
+                        break;
+                    }
+                }
+            }
             
             // 수수료 계산
             const calculated_commission = original_commission / commissionSettings.normalDivisor;
             
             return {
                 company: companyName,
-                model: model,
-                product: product || model,
-                as_info: as_info,
+                model: model || product || '',
+                product: product || model || '',
+                as_info: as_info || '',
                 rental_fee: rental_fee,
                 months: months,
                 original_commission: original_commission,
