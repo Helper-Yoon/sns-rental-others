@@ -1397,6 +1397,14 @@
             // 데이터가 충분한지 확인
             console.log(`  - 총 ${data.length}개 행 발견`);
             
+            // 특수 시트 처리 (KT렌탈, 스마트렌탈 등)
+            if (sheetName === 'KT렌탈') {
+                return parseKTRentalSheet(data, sheetName, fileName);
+            } else if (sheetName === '스마트렌탈') {
+                return parseSmartRentalSheet(data, sheetName, fileName);
+            }
+            
+            // 일반 시트 처리
             // 헤더 찾기 - 더 유연하게
             let headerRow = -1;
             let headers = [];
@@ -1417,7 +1425,7 @@
                 const hasModelKeyword = rowText.includes('모델') || rowText.includes('품번') || rowText.includes('형번') || 
                                        rowText.includes('코드') || rowText.includes('제품번호');
                 const hasProductKeyword = rowText.includes('상품') || rowText.includes('품명') || rowText.includes('제품') || 
-                                         rowText.includes('품목') || rowText.includes('제품명');
+                                         rowText.includes('품목') || rowText.includes('제품명') || rowText.includes('규정명');
                 const hasRentalKeyword = rowText.includes('렌탈') || rowText.includes('월') || rowText.includes('요금') || 
                                         rowText.includes('금액') || rowText.includes('료');
                 const hasCommissionKeyword = rowText.includes('수수료') || rowText.includes('커미션') || rowText.includes('fee') || 
@@ -1510,6 +1518,134 @@
             }
             
             console.log(`  - 처리 결과: 유효 ${validRowCount}행, 스킵 ${skippedRowCount}행`);
+            return products;
+        }
+        
+        // KT렌탈 시트 전용 파싱
+        function parseKTRentalSheet(data, sheetName, fileName) {
+            const products = [];
+            const companyName = 'KT렌탈';
+            
+            console.log(`  - KT렌탈 시트 특수 처리 시작`);
+            
+            // KT렌탈은 행 5와 6이 헤더
+            // 행 5: [null, "상품명", "비고", "모델코드", "렌탈료", ...]
+            // 행 6: [null, null, null, null, "일시불", "36개월", "48개월", "60개월", ...]
+            
+            let validRowCount = 0;
+            
+            // 데이터는 행 8부터 시작 (인덱스 7)
+            for (let i = 7; i < data.length; i++) {
+                const row = data[i];
+                if (!row || !row[1] || !row[3]) continue;  // 상품명과 모델코드가 없으면 스킵
+                
+                const productName = String(row[1] || '').trim();
+                const modelCode = String(row[3] || '').trim();
+                
+                // 각 개월별로 별도 상품 생성
+                const monthColumns = [
+                    { months: 36, index: 5 },
+                    { months: 48, index: 6 },
+                    { months: 60, index: 7 }
+                ];
+                
+                for (const { months, index } of monthColumns) {
+                    const rentalFee = parseNumber(row[index]);
+                    if (rentalFee > 0) {
+                        // KT렌탈은 수수료 정보가 없으므로 렌탈료의 10%로 가정
+                        const originalCommission = rentalFee * months * 0.1;
+                        const calculatedCommission = originalCommission / commissionSettings.normalDivisor;
+                        
+                        products.push({
+                            company: companyName,
+                            model: modelCode,
+                            product: productName,
+                            as_info: '',
+                            rental_fee: rentalFee,
+                            months: months,
+                            original_commission: originalCommission,
+                            calculated_commission: calculatedCommission,
+                            sheet_name: sheetName,
+                            file_name: fileName
+                        });
+                        
+                        validRowCount++;
+                        
+                        if (validRowCount <= 3) {
+                            console.log(`    샘플 ${validRowCount}: ${modelCode} | ${months}개월 | 렌탈료: ${rentalFee}원`);
+                        }
+                    }
+                }
+            }
+            
+            console.log(`  - KT렌탈 처리 완료: ${validRowCount}개 상품`);
+            return products;
+        }
+        
+        // 스마트렌탈 시트 전용 파싱
+        function parseSmartRentalSheet(data, sheetName, fileName) {
+            const products = [];
+            const companyName = '스마트렌탈';
+            
+            console.log(`  - 스마트렌탈 시트 특수 처리 시작`);
+            
+            // 스마트렌탈은 데이터가 7번 컬럼부터 시작
+            // 컬럼 구조: [7]구분, [8]제조사, [9]품목, [10]상태, [11]A/S, [14]상품명, [15]모델명, [16]36개월, [17]48개월, [18]60개월, [19]수수료
+            
+            let validRowCount = 0;
+            
+            // 데이터는 행 6부터 시작 (인덱스 5)
+            for (let i = 5; i < data.length; i++) {
+                const row = data[i];
+                if (!row || row.length < 15) continue;
+                
+                const manufacturer = String(row[8] || '').trim();
+                const category = String(row[9] || '').trim();
+                const productName = String(row[14] || '').trim();
+                const modelName = String(row[15] || '').trim();
+                
+                if (!productName && !modelName) continue;
+                
+                // 렌탈료와 수수료 추출
+                const rental36 = parseNumber(row[16]);
+                const rental48 = parseNumber(row[17]);
+                const rental60 = parseNumber(row[18]);
+                const commission = parseNumber(row[19]);
+                
+                // 각 개월별로 상품 생성
+                const monthData = [
+                    { months: 36, rental: rental36 },
+                    { months: 48, rental: rental48 },
+                    { months: 60, rental: rental60 }
+                ];
+                
+                for (const { months, rental } of monthData) {
+                    if (rental > 0 && rental < 1000000) {
+                        const calculatedCommission = commission / commissionSettings.normalDivisor;
+                        
+                        products.push({
+                            company: companyName,
+                            model: modelName || productName,
+                            product: productName || modelName,
+                            as_info: String(row[11] || '').trim(),
+                            rental_fee: rental,
+                            months: months,
+                            original_commission: commission,
+                            calculated_commission: calculatedCommission,
+                            sheet_name: sheetName,
+                            file_name: fileName
+                        });
+                        
+                        validRowCount++;
+                        
+                        if (validRowCount <= 3) {
+                            console.log(`    샘플 ${validRowCount}: ${modelName} | ${months}개월 | 렌탈료: ${rental}원 | 수수료: ${Math.round(calculatedCommission)}원`);
+                        }
+                    }
+                }
+            }
+            
+            console.log(`  - 스마트렌탈 처리 완료: ${validRowCount}개 상품`);
             return products;
         }
 
