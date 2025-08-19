@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SNS센터 렌탈견적 시스템 - 대형가전 편</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #000000;
+            color: #ffffff;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 40px;
+            font-size: 32px;
+            font-weight: 700;
+            color: #1E5FBF;
+        }
+
+        .section {
+            background-color: #111111;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            border: 2px solid #1E5FBF;
+        }
+
+        .section-title {
+            font-size: 26px;
+            font-weight: 600;
+            margin-bottom: 25px;
+            color: #1E5FBF;
+            text-align: center;
+        }
+
+        .month-group {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .month-group {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .month-card {
+            background-color: #1a1a1a;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #333;
+            transition: border-color 0.3s, background-color 0.3s;
+        }
+
+        .month-card:hover {
+            border-color: #1E5FBF;
+            background-color: #1f1f1f;
+        }
+
+        .month-label {
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 15px;
+            color: #1E5FBF;
+            text-align: center;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #cccccc;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #333;
+            border-radius: 8px;
+            background-color: #222;
+            color: #fff;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: #1E5FBF;
+        }
+
+        .result {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1E5FBF;
+            margin-bottom: 15px;
+            min-height: 25px;
+            text-align: center;
+        }
+
+        .copy-btn {
+            width: 100%;
+            padding: 10px;
+            background-color: #1E5FBF;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background-color 0.3s;
+        }
+
+        .copy-btn:hover {
+            background-color: #1548a0;
+        }
+
+        .copy-btn:active {
+            background-color: #0d3380;
+        }
+
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 120px;
+            background-color: #555;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -60px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 12px;
+        }
+
+        .tooltip.show .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>SNS센터 렌탈견적 시스템 - 대형가전 편</h1>
+        
+        <!-- 일반 대형가전 -->
+        <div class="section">
+            <h2 class="section-title">🏠 일반 대형가전</h2>
+            <div class="month-group">
+                <div class="month-card">
+                    <div class="month-label">36개월</div>
+                    <div class="input-group">
+                        <label class="input-label">수수료 입력</label>
+                        <input type="text" class="input-field" id="normal36" placeholder="수수료를 입력하세요" oninput="formatNumber(this); calculateNormal('36')">
+                    </div>
+                    <div class="result" id="result-normal36"></div>
+                    <div class="tooltip">
+                        <button class="copy-btn" onclick="copyResult('result-normal36', this)">복사</button>
+                        <span class="tooltiptext">복사되었습니다!</span>
+                    </div>
+                </div>
+                
+                <div class="month-card">
+                    <div class="month-label">48개월</div>
+                    <div class="input-group">
+                        <label class="input-label">수수료 입력</label>
+                        <input type="text" class="input-field" id="normal48" placeholder="수수료를 입력하세요" oninput="formatNumber(this); calculateNormal('48')">
+                    </div>
+                    <div class="result" id="result-normal48"></div>
+                    <div class="tooltip">
+                        <button class="copy-btn" onclick="copyResult('result-normal48', this)">복사</button>
+                        <span class="tooltiptext">복사되었습니다!</span>
+                    </div>
+                </div>
+                
+                <div class="month-card">
+                    <div class="month-label">60개월</div>
+                    <div class="input-group">
+                        <label class="input-label">수수료 입력</label>
+                        <input type="text" class="input-field" id="normal60" placeholder="수수료를 입력하세요" oninput="formatNumber(this); calculateNormal('60')">
+                    </div>
+                    <div class="result" id="result-normal60"></div>
+                    <div class="tooltip">
+                        <button class="copy-btn" onclick="copyResult('result-normal60', this)">복사</button>
+                        <span class="tooltiptext">복사되었습니다!</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 헬로비전 대형가전 -->
+        <div class="section">
+            <h2 class="section-title">📺 헬로비전 대형가전</h2>
+            <div class="month-group">
+                <div class="month-card">
+                    <div class="month-label">36개월</div>
+                    <div class="input-group">
+                        <label class="input-label">수수료 입력</label>
+                        <input type="text" class="input-field" id="hello36" placeholder="수수료를 입력하세요" oninput="formatNumber(this); calculateHello('36')">
+                    </div>
+                    <div class="result" id="result-hello36"></div>
+                    <div class="tooltip">
+                        <button class="copy-btn" onclick="copyResult('result-hello36', this)">복사</button>
+                        <span class="tooltiptext">복사되었습니다!</span>
+                    </div>
+                </div>
+                
+                <div class="month-card">
+                    <div class="month-label">48개월</div>
+                    <div class="input-group">
+                        <label class="input-label">수수료 입력</label>
+                        <input type="text" class="input-field" id="hello48" placeholder="수수료를 입력하세요" oninput="formatNumber(this); calculateHello('48')">
+                    </div>
+                    <div class="result" id="result-hello48"></div>
+                    <div class="tooltip">
+                        <button class="copy-btn" onclick="copyResult('result-hello48', this)">복사</button>
+                        <span class="tooltiptext">복사되었습니다!</span>
+                    </div>
+                </div>
+                
+                <div class="month-card">
+                    <div class="month-label">60개월</div>
+                    <div class="input-group">
+                        <label class="input-label">수수료 입력</label>
+                        <input type="text" class="input-field" id="hello60" placeholder="수수료를 입력하세요" oninput="formatNumber(this); calculateHello('60')">
+                    </div>
+                    <div class="result" id="result-hello60"></div>
+                    <div class="tooltip">
+                        <button class="copy-btn" onclick="copyResult('result-hello60', this)">복사</button>
+                        <span class="tooltiptext">복사되었습니다!</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 숫자 콤마 포맷팅
+        function formatNumber(input) {
+            let value = input.value.replace(/[^\d]/g, '');
+            if (value) {
+                value = parseInt(value).toLocaleString();
+            }
+            input.value = value;
+        }
+
+        // 일반 대형가전 계산 (수수료 ÷ 1.1)
+        function calculateNormal(month) {
+            const inputElement = document.getElementById(`normal${month}`);
+            const resultElement = document.getElementById(`result-normal${month}`);
+            
+            const inputValue = inputElement.value.replace(/[^\d]/g, '');
+            
+            if (inputValue && inputValue !== '0') {
+                const fee = parseInt(inputValue);
+                const result = Math.round(fee / 1.1);
+                resultElement.textContent = result.toLocaleString() + '원';
+            } else {
+                resultElement.textContent = '';
+            }
+        }
+
+        // 헬로비전 계산 (수수료를 역산하여 (총금액×0.22)÷1.1 방식)
+        function calculateHello(month) {
+            const inputElement = document.getElementById(`hello${month}`);
+            const resultElement = document.getElementById(`result-hello${month}`);
+            
+            const inputValue = inputElement.value.replace(/[^\d]/g, '');
+            
+            if (inputValue && inputValue !== '0') {
+                const fee = parseInt(inputValue);
+                // 헬로비전 공식: (총금액×0.22)÷1.1 = 수수료
+                // 따라서 총금액 = (수수료 × 1.1) ÷ 0.22
+                const totalAmount = (fee * 1.1) / 0.22;
+                const result = Math.round(totalAmount);
+                resultElement.textContent = result.toLocaleString() + '원';
+            } else {
+                resultElement.textContent = '';
+            }
+        }
+
+        // 복사 기능 (원 제외하고 숫자만)
+        function copyResult(resultId, button) {
+            const resultElement = document.getElementById(resultId);
+            const text = resultElement.textContent;
+            
+            if (text) {
+                // 원 제거하고 콤마 제거한 숫자만 복사
+                const numberOnly = text.replace(/[^\d]/g, '');
+                
+                // 클립보드에 복사
+                navigator.clipboard.writeText(numberOnly).then(() => {
+                    // 툴팁 표시
+                    const tooltip = button.parentElement;
+                    tooltip.classList.add('show');
+                    
+                    setTimeout(() => {
+                        tooltip.classList.remove('show');
+                    }, 2000);
+                });
+            }
+        }
+    </script>
+</body>
+</html>
