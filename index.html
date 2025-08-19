@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SNS센터 렌탈견적 시스템 - 대형가전 편</title>
+    <title>SNS센터 렌탈견적 시스템 - 기타렌탈 편</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
         * {
@@ -224,11 +224,11 @@
 </head>
 <body>
     <div class="container">
-        <h1>SNS센터 렌탈견적 시스템 - 대형가전 편</h1>
+        <h1>SNS센터 렌탈견적 시스템 - 기타렌탈 편</h1>
         
         <!-- 일반 대형가전 -->
         <div class="section">
-            <h2 class="section-title">🏠 일반 대형가전</h2>
+            <h2 class="section-title">🏠 일반 기타렌탈</h2>
             <div class="month-group">
                 <div class="month-card">
                     <div class="month-label">36개월</div>
@@ -285,15 +285,15 @@
 
         <!-- 헬로비전 대형가전 -->
         <div class="section">
-            <h2 class="section-title">📺 헬로비전 대형가전</h2>
+            <h2 class="section-title">📺 헬로비전 기타렌탈</h2>
             <div class="month-group">
                 <div class="month-card">
                     <div class="month-label">36개월</div>
                     <div class="input-group">
                         <div class="input-row">
                             <div class="input-field-wrapper">
-                                <label class="input-label">수수료 입력</label>
-                                <input type="text" class="input-field" id="hello36" placeholder="수수료를 입력하세요" oninput="formatNumber(this); calculateHello('36')">
+                                <label class="input-label">총금액 입력</label>
+                                <input type="text" class="input-field" id="hello36" placeholder="총금액을 입력하세요" oninput="formatNumber(this); calculateHello('36')">
                             </div>
                             <div class="tooltip">
                                 <button class="copy-btn" onclick="copyResult('result-hello36', this)">복사</button>
@@ -309,8 +309,8 @@
                     <div class="input-group">
                         <div class="input-row">
                             <div class="input-field-wrapper">
-                                <label class="input-label">수수료 입력</label>
-                                <input type="text" class="input-field" id="hello48" placeholder="수수료를 입력하세요" oninput="formatNumber(this); calculateHello('48')">
+                                <label class="input-label">총금액 입력</label>
+                                <input type="text" class="input-field" id="hello48" placeholder="총금액을 입력하세요" oninput="formatNumber(this); calculateHello('48')">
                             </div>
                             <div class="tooltip">
                                 <button class="copy-btn" onclick="copyResult('result-hello48', this)">복사</button>
@@ -326,8 +326,8 @@
                     <div class="input-group">
                         <div class="input-row">
                             <div class="input-field-wrapper">
-                                <label class="input-label">수수료 입력</label>
-                                <input type="text" class="input-field" id="hello60" placeholder="수수료를 입력하세요" oninput="formatNumber(this); calculateHello('60')">
+                                <label class="input-label">총금액 입력</label>
+                                <input type="text" class="input-field" id="hello60" placeholder="총금액을 입력하세요" oninput="formatNumber(this); calculateHello('60')">
                             </div>
                             <div class="tooltip">
                                 <button class="copy-btn" onclick="copyResult('result-hello60', this)">복사</button>
@@ -345,12 +345,12 @@
             <h2 class="formula-title">📊 계산 공식</h2>
             <div class="formula-list">
                 <div class="formula-item">
-                    <div class="formula-label">🏠 일반 대형가전 산식</div>
-                    <div class="formula-text">수수료 ÷ 1.1</div>
+                    <div class="formula-label">🏠 일반 기타렌탈 산식</div>
+                    <div class="formula-text">수수료(VAT포함) ÷ 1.1 = CRM 입력 수수료</div>
                 </div>
                 <div class="formula-item">
-                    <div class="formula-label">📺 헬로비전 대형가전 산식</div>
-                    <div class="formula-text">(총 금액 × 0.22) ÷ 1.1</div>
+                    <div class="formula-label">📺 헬로비전 기타렌탈 산식</div>
+                    <div class="formula-text">(총금액 × 0.22) ÷ 1.1 = CRM 입력 수수료</div>
                 </div>
             </div>
         </div>
@@ -382,7 +382,7 @@
             }
         }
 
-        // 헬로비전 계산 (수수료를 역산하여 (총금액×0.22)÷1.1 방식)
+        // 헬로비전 계산 ((총금액×0.22)÷1.1 = 수수료)
         function calculateHello(month) {
             const inputElement = document.getElementById(`hello${month}`);
             const resultElement = document.getElementById(`result-hello${month}`);
@@ -390,11 +390,9 @@
             const inputValue = inputElement.value.replace(/[^\d]/g, '');
             
             if (inputValue && inputValue !== '0') {
-                const fee = parseInt(inputValue);
+                const totalAmount = parseInt(inputValue);
                 // 헬로비전 공식: (총금액×0.22)÷1.1 = 수수료
-                // 따라서 총금액 = (수수료 × 1.1) ÷ 0.22
-                const totalAmount = (fee * 1.1) / 0.22;
-                const result = Math.round(totalAmount);
+                const result = Math.round((totalAmount * 0.22) / 1.1);
                 resultElement.textContent = result.toLocaleString() + '원';
             } else {
                 resultElement.textContent = '';
