@@ -86,6 +86,16 @@
             margin-bottom: 15px;
         }
 
+        .input-row {
+            display: flex;
+            gap: 10px;
+            align-items: end;
+        }
+
+        .input-field-wrapper {
+            flex: 1;
+        }
+
         .input-label {
             display: block;
             margin-bottom: 8px;
@@ -113,14 +123,13 @@
             font-size: 18px;
             font-weight: 600;
             color: #1E5FBF;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
             min-height: 25px;
             text-align: center;
         }
 
         .copy-btn {
-            width: 100%;
-            padding: 10px;
+            padding: 12px 16px;
             background-color: #1E5FBF;
             color: white;
             border: none;
@@ -129,6 +138,8 @@
             font-size: 14px;
             font-weight: 500;
             transition: background-color 0.3s;
+            white-space: nowrap;
+            height: 48px;
         }
 
         .copy-btn:hover {
@@ -166,6 +177,49 @@
             visibility: visible;
             opacity: 1;
         }
+
+        .formula-section {
+            background-color: #111111;
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 30px;
+            border: 2px solid #1E5FBF;
+        }
+
+        .formula-title {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #1E5FBF;
+            text-align: center;
+        }
+
+        .formula-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .formula-item {
+            background-color: #1a1a1a;
+            border-radius: 8px;
+            padding: 15px;
+            border: 1px solid #333;
+        }
+
+        .formula-label {
+            font-size: 16px;
+            font-weight: 500;
+            color: #ffffff;
+            margin-bottom: 5px;
+        }
+
+        .formula-text {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1E5FBF;
+            font-family: 'Courier New', monospace;
+        }
     </style>
 </head>
 <body>
@@ -179,40 +233,52 @@
                 <div class="month-card">
                     <div class="month-label">36개월</div>
                     <div class="input-group">
-                        <label class="input-label">수수료 입력</label>
-                        <input type="text" class="input-field" id="normal36" placeholder="수수료를 입력하세요" oninput="formatNumber(this); calculateNormal('36')">
+                        <div class="input-row">
+                            <div class="input-field-wrapper">
+                                <label class="input-label">수수료 입력</label>
+                                <input type="text" class="input-field" id="normal36" placeholder="수수료를 입력하세요" oninput="formatNumber(this); calculateNormal('36')">
+                            </div>
+                            <div class="tooltip">
+                                <button class="copy-btn" onclick="copyResult('result-normal36', this)">복사</button>
+                                <span class="tooltiptext">복사되었습니다!</span>
+                            </div>
+                        </div>
                     </div>
                     <div class="result" id="result-normal36"></div>
-                    <div class="tooltip">
-                        <button class="copy-btn" onclick="copyResult('result-normal36', this)">복사</button>
-                        <span class="tooltiptext">복사되었습니다!</span>
-                    </div>
                 </div>
                 
                 <div class="month-card">
                     <div class="month-label">48개월</div>
                     <div class="input-group">
-                        <label class="input-label">수수료 입력</label>
-                        <input type="text" class="input-field" id="normal48" placeholder="수수료를 입력하세요" oninput="formatNumber(this); calculateNormal('48')">
+                        <div class="input-row">
+                            <div class="input-field-wrapper">
+                                <label class="input-label">수수료 입력</label>
+                                <input type="text" class="input-field" id="normal48" placeholder="수수료를 입력하세요" oninput="formatNumber(this); calculateNormal('48')">
+                            </div>
+                            <div class="tooltip">
+                                <button class="copy-btn" onclick="copyResult('result-normal48', this)">복사</button>
+                                <span class="tooltiptext">복사되었습니다!</span>
+                            </div>
+                        </div>
                     </div>
                     <div class="result" id="result-normal48"></div>
-                    <div class="tooltip">
-                        <button class="copy-btn" onclick="copyResult('result-normal48', this)">복사</button>
-                        <span class="tooltiptext">복사되었습니다!</span>
-                    </div>
                 </div>
                 
                 <div class="month-card">
                     <div class="month-label">60개월</div>
                     <div class="input-group">
-                        <label class="input-label">수수료 입력</label>
-                        <input type="text" class="input-field" id="normal60" placeholder="수수료를 입력하세요" oninput="formatNumber(this); calculateNormal('60')">
+                        <div class="input-row">
+                            <div class="input-field-wrapper">
+                                <label class="input-label">수수료 입력</label>
+                                <input type="text" class="input-field" id="normal60" placeholder="수수료를 입력하세요" oninput="formatNumber(this); calculateNormal('60')">
+                            </div>
+                            <div class="tooltip">
+                                <button class="copy-btn" onclick="copyResult('result-normal60', this)">복사</button>
+                                <span class="tooltiptext">복사되었습니다!</span>
+                            </div>
+                        </div>
                     </div>
                     <div class="result" id="result-normal60"></div>
-                    <div class="tooltip">
-                        <button class="copy-btn" onclick="copyResult('result-normal60', this)">복사</button>
-                        <span class="tooltiptext">복사되었습니다!</span>
-                    </div>
                 </div>
             </div>
         </div>
@@ -224,40 +290,67 @@
                 <div class="month-card">
                     <div class="month-label">36개월</div>
                     <div class="input-group">
-                        <label class="input-label">수수료 입력</label>
-                        <input type="text" class="input-field" id="hello36" placeholder="수수료를 입력하세요" oninput="formatNumber(this); calculateHello('36')">
+                        <div class="input-row">
+                            <div class="input-field-wrapper">
+                                <label class="input-label">수수료 입력</label>
+                                <input type="text" class="input-field" id="hello36" placeholder="수수료를 입력하세요" oninput="formatNumber(this); calculateHello('36')">
+                            </div>
+                            <div class="tooltip">
+                                <button class="copy-btn" onclick="copyResult('result-hello36', this)">복사</button>
+                                <span class="tooltiptext">복사되었습니다!</span>
+                            </div>
+                        </div>
                     </div>
                     <div class="result" id="result-hello36"></div>
-                    <div class="tooltip">
-                        <button class="copy-btn" onclick="copyResult('result-hello36', this)">복사</button>
-                        <span class="tooltiptext">복사되었습니다!</span>
-                    </div>
                 </div>
                 
                 <div class="month-card">
                     <div class="month-label">48개월</div>
                     <div class="input-group">
-                        <label class="input-label">수수료 입력</label>
-                        <input type="text" class="input-field" id="hello48" placeholder="수수료를 입력하세요" oninput="formatNumber(this); calculateHello('48')">
+                        <div class="input-row">
+                            <div class="input-field-wrapper">
+                                <label class="input-label">수수료 입력</label>
+                                <input type="text" class="input-field" id="hello48" placeholder="수수료를 입력하세요" oninput="formatNumber(this); calculateHello('48')">
+                            </div>
+                            <div class="tooltip">
+                                <button class="copy-btn" onclick="copyResult('result-hello48', this)">복사</button>
+                                <span class="tooltiptext">복사되었습니다!</span>
+                            </div>
+                        </div>
                     </div>
                     <div class="result" id="result-hello48"></div>
-                    <div class="tooltip">
-                        <button class="copy-btn" onclick="copyResult('result-hello48', this)">복사</button>
-                        <span class="tooltiptext">복사되었습니다!</span>
-                    </div>
                 </div>
                 
                 <div class="month-card">
                     <div class="month-label">60개월</div>
                     <div class="input-group">
-                        <label class="input-label">수수료 입력</label>
-                        <input type="text" class="input-field" id="hello60" placeholder="수수료를 입력하세요" oninput="formatNumber(this); calculateHello('60')">
+                        <div class="input-row">
+                            <div class="input-field-wrapper">
+                                <label class="input-label">수수료 입력</label>
+                                <input type="text" class="input-field" id="hello60" placeholder="수수료를 입력하세요" oninput="formatNumber(this); calculateHello('60')">
+                            </div>
+                            <div class="tooltip">
+                                <button class="copy-btn" onclick="copyResult('result-hello60', this)">복사</button>
+                                <span class="tooltiptext">복사되었습니다!</span>
+                            </div>
+                        </div>
                     </div>
                     <div class="result" id="result-hello60"></div>
-                    <div class="tooltip">
-                        <button class="copy-btn" onclick="copyResult('result-hello60', this)">복사</button>
-                        <span class="tooltiptext">복사되었습니다!</span>
-                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 계산 공식 설명 -->
+        <div class="formula-section">
+            <h2 class="formula-title">📊 계산 공식</h2>
+            <div class="formula-list">
+                <div class="formula-item">
+                    <div class="formula-label">🏠 일반 대형가전 산식</div>
+                    <div class="formula-text">수수료 ÷ 1.1</div>
+                </div>
+                <div class="formula-item">
+                    <div class="formula-label">📺 헬로비전 대형가전 산식</div>
+                    <div class="formula-text">(총 금액 × 0.22) ÷ 1.1</div>
                 </div>
             </div>
         </div>
